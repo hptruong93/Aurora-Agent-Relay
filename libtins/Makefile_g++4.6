@@ -37,4 +37,4 @@ WARPControl_pdu.o : WARPControl_pdu.h WARPControl_pdu.cpp
 	$(CC) WARPControl_pdu.cpp $(CFLAGS)
 
 clean:
-	rm -rf *.o *~ ethToWifi wifiToEth
+	rm -rf *.o *~ ethToWifi wifiToEth pprocess pcrafter
