@@ -64,3 +64,9 @@ docs/_build/
 *.exe
 *.out
 *.app
+
+# Custom Executables
+ethToWifi
+wifiToEth
+pprocess
+pcrafter
