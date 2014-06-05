@@ -66,9 +66,9 @@ def getAuthentication(src = WARP, dst = PCEngine):
 #EthernetII assocPkt = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() /   Dot11AssocRequest(WIFIDST, WIFISRC);
 
 #####################################################################################################
-class Sender:
+class Sender:#Get message from ethernet and put it into wlan0
 
-    def __init__(self, in_interface = eth0, out_interface = DEFAULT_VWFACE):
+    def __init__(self, in_interface = eth1, out_interface = DEFAULT_VWFACE):
         print "init sniffer"
         self.in_interface = in_interface
         self.out_interface = out_interface
@@ -84,7 +84,7 @@ class Sender:
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
-class Sniffer:
+class Sniffer:#Get message from hwsim0 and output it to ethernet
     FILTER = VWIFI
 
     def __init__(self, in_interface = hwsim0, out_interface = eth1, src = WIFISRC, dst = WARP):
@@ -106,6 +106,16 @@ class Sniffer:
 
 #####################################################################################################
 
+def print_usage():
+    print "Usage:"
+    print "f/from_PC --> start processing packets originated from PC"
+    print "t/to_PC --> start processing packets coming to PC from WARP"
+    print "s to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
+    print "where to_send is one of the following: asc, reasc, probe, disasc, auth"
+    print "iface is the interface"
+    print "src and dst are optional, specifying what src and dst the packet will take. But they must go together (cannot specify just one)"
+    print "loop number is also optional. If none provided then assume infinite loop"
+
 if __name__ == '__main__':
     sending = {}
     sending['asc'] = getAssociationRequest
@@ -115,13 +125,7 @@ if __name__ == '__main__':
     sending['auth'] = getAuthentication
     
     if sys.argv[1] == "--help" or sys.argv[1] == "help" or sys.argv[1] == "-h":
-        print "f/from_PC --> start processing packets originated from PC"
-        print "t/to_PC --> start processing packets coming to PC from WARP"
-        print "s to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
-        print "where to_send is one of the following: asc, reasc, probe, disasc, auth"
-        print "iface is the interface"
-        print "src and dst are optional, specifying what src and dst the packet will take. But they must go together (cannot specify just one)"
-        print "loop number is also optional. If none provided then assume infinite loop"
+        print_usage()
     elif sys.argv[1] == "f" or sys.argv[1] == "from_PC": #Start processing pkt originated from PC
         sniffer = Sniffer()
         sniffer.sniffing()
@@ -137,6 +141,7 @@ if __name__ == '__main__':
         except Exception as e:
             print "Missing something"
             traceback.print_exc(file=sys.stdout)
+            print_usage()
             sys.exit(-1)
 
         src = None
