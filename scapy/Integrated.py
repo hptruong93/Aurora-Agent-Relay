@@ -35,7 +35,7 @@ hwsim0 = "hwsim0"
 #####################################################################################################
 
 def getDefaultHeader(src = DEFAULT_SRC, dst = DEFAULT_DST):
-    output = Ether() / Sniffer.WARPControlHeader()
+    output = Ether() / WARPControlHeader()
     output.src = src
     output.dst = dst
     return output
@@ -159,7 +159,7 @@ if __name__ == '__main__':
             if sys.argv[6] == "-l" or sys.argv[6] == "--loop":
                 if len(sys.argv) == 8:
                     print "Send packet of type %s from src %s and dst %s with count = %s" % (message_factory, src, dst, sys.argv[7])
-                    sendp(message_factory(src, dst), iface=iface, count = sys.argv[7])
+                    sendp(message_factory(src, dst), iface=iface, count = int(sys.argv[7]))
                 else:
                     print "Send packet of type %s from src %s and dst %s with infinite loop" % (message_factory, src, dst)
                     sendp(message_factory(src, dst), iface=iface, loop = 1)
@@ -171,7 +171,7 @@ if __name__ == '__main__':
                 if sys.argv[4] == "-l" or sys.argv[4] == "--loop":
                     if len(sys.argv) == 6:
                         print "Send packet of type %s with count = %s" % (message_factory, sys.argv[5])
-                        sendp(message_factory(), iface=iface, count = sys.argv[5])
+                        sendp(message_factory(), iface=iface, count = int(sys.argv[5]))
                     else:
                         print "Send packet of type %s with infinite loop" % (message_factory)
                         sendp(message_factory(), iface=iface, loop = 1)
