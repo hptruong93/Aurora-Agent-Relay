@@ -105,6 +105,9 @@ class Sniffer:#Get message from hwsim0 and output it to ethernet
             sendp(eth_frame, iface = self.out_interface)
 
 #####################################################################################################
+def strip_name(getFunction):
+    return getFunction.__name__[3:]
+
 
 def print_usage():
     print "Usage:"
@@ -158,23 +161,23 @@ if __name__ == '__main__':
         if src and dst:
             if sys.argv[6] == "-l" or sys.argv[6] == "--loop":
                 if len(sys.argv) == 8:
-                    print "Send packet of type %s from src %s and dst %s with count = %s" % (message_factory, src, dst, sys.argv[7])
+                    print "Send packet of type %s from src %s and dst %s with count = %s" % (strip_name(message_factory), src, dst, sys.argv[7])
                     sendp(message_factory(src, dst), iface=iface, count = int(sys.argv[7]))
                 else:
-                    print "Send packet of type %s from src %s and dst %s with infinite loop" % (message_factory, src, dst)
+                    print "Send packet of type %s from src %s and dst %s with infinite loop" % (strip_name(message_factory), src, dst)
                     sendp(message_factory(src, dst), iface=iface, loop = 1)
             else:
-                print "Send packet of type %s from src %s and dst %s with no loop" % (message_factory, src, dst)
+                print "Send packet of type %s from src %s and dst %s with no loop" % (strip_name(message_factory), src, dst)
                 sendp(message_factory(src, dst), iface=iface)
         else:
             if len(sys.argv) >= 5:
                 if sys.argv[4] == "-l" or sys.argv[4] == "--loop":
                     if len(sys.argv) == 6:
-                        print "Send packet of type %s with count = %s" % (message_factory, sys.argv[5])
+                        print "Send packet of type %s with count = %s" % (strip_name(message_factory), sys.argv[5])
                         sendp(message_factory(), iface=iface, count = int(sys.argv[5]))
                     else:
-                        print "Send packet of type %s with infinite loop" % (message_factory)
+                        print "Send packet of type %s with infinite loop" % (strip_name(message_factory))
                         sendp(message_factory(), iface=iface, loop = 1)
             else:
-                print "Send packet of type %s with no loop" % (message_factory)
+                print "Send packet of type %s with no loop" % (strip_name(message_factory))
                 sendp(message_factory(), iface=iface)
