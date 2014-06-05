@@ -113,7 +113,7 @@ def print_usage():
     print "Usage:"
     print "f/from_PC --> start processing packets originated from PC"
     print "t/to_PC --> start processing packets coming to PC from WARP"
-    print "s to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
+    print "s/send to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
     print "where to_send is one of the following: asc, reasc, probe, disasc, auth"
     print "iface is the interface"
     print "src and dst are optional, specifying what src and dst the packet will take. But they must go together (cannot specify just one)"
