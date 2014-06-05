@@ -13,7 +13,7 @@ class WARPControlHeader(Packet):
 #####################################################################################################
 
 WARP = "a0:a1:a2:a3:a4:a5"
-PCEngine = "0a:00:27:00:00:00"
+PCEngine = "c0:c1:c2:c3:c4:c5"
 VWIFI = "02:00:00:00:00:00" #Virtual Wifi Interface
 
 DEFAULT_SRC = WARP
@@ -40,28 +40,31 @@ def getDefaultHeader(src = DEFAULT_SRC, dst = DEFAULT_DST):
     output.dst = dst
     return output
 
-def addWifiInfo(packet, src = WIFISRC, dst = WIFIDST):
-    packet.src = src
-    packet.dst = dst
+def addWifiInfo(dot11Type, src = WIFISRC, dst = WIFIDST):
+    packet = Dot11()
+    packet.addr1 = dst
+    packet.addr2 = src
+    packet.type = 0
+    packet.subtype = hex(dot11Type) 
     return packet
 
 #####################################################################################################
 
 #See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
 def getAssociationRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(Dot11AssoReq(), src, dst)
+    return getDefaultHeader(src, dst) / addWifiInfo(0x000)
 
 def getReAssociationRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(Dot11ReassoReq(), src, dst)
+    return getDefaultHeader(src, dst) / addWifiInfo(0x0010)
 
 def getProbeRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(Dot11ProbeReq(), src, dst)
+    return getDefaultHeader(src, dst) / addWifiInfo(0x0100)
 
 def getDisassociation(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(Dot11Disas(), src, dst)
+    return getDefaultHeader(src, dst) / addWifiInfo(0x1010)
 
 def getAuthentication(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(Dot11Auth(), src, dst)
+    return getDefaultHeader(src, dst) / addWifiInfo(0x1011)
 
 #EthernetII assocPkt = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() /   Dot11AssocRequest(WIFIDST, WIFISRC);
 
@@ -115,12 +118,10 @@ class WARPDecode:
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        if type(pkt) == Ether:
-            if type(pkt.payload) == WARPControlHeader:
-                outPacket = pkt.payload.payload
-                sendp(outPacket, iface=self.out_interface)
-            else:
-                print('Error: Malformed WARP Header or Unexpected Type...\nSkipping Packet...')
+        if type(pkt) == Dot3:
+            Wpacket = WARPControlHeader(str(pkt.payload))
+            outPacket = Dot11(str(Wpacket.payload))
+            sendp(outPacket, iface=self.out_interface)
         else:
             print('Error: Unexpected type...\nSkipping Packet...')
 #####################################################################################################
@@ -155,6 +156,9 @@ if __name__ == '__main__':
     elif sys.argv[1] == "t" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
         sender = Sender()
         sender.sniffing()
+    elif sys.argv[1] == "w" or sys.argv[1] == "WARP_mode":
+        Wdecode = WARPDecode()
+        Wdecode.sniffing()
     elif sys.argv[1] == "s" or sys.argv[1] == "send":
         message_factory = None
         iface = None
@@ -194,7 +198,7 @@ if __name__ == '__main__':
                 if sys.argv[4] == "-l" or sys.argv[4] == "--loop":
                     if len(sys.argv) == 6:
                         print "Send packet of type %s with count = %s" % (strip_name(message_factory), sys.argv[5])
-                        sendp(message_factory(), iface=iface, count = int(sys.argv[5]))
+                        sendp(message_factory(), iface=iface, count = int(sys.argv[5]), inter=0.1)
                     else:
                         print "Send packet of type %s with infinite loop" % (strip_name(message_factory))
                         sendp(message_factory(), iface=iface, loop = 1)
