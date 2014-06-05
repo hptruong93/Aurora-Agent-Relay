@@ -155,9 +155,6 @@ if __name__ == '__main__':
     elif sys.argv[1] == "t" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
         sender = Sender()
         sender.sniffing()
-    elif sys.argv[1] == "w" or sys.argv[1] == "WARP_mode":
-        Wdecode = WARPDecode()
-        Wdecode.sniffing()
     elif sys.argv[1] == "s" or sys.argv[1] == "send":
         message_factory = None
         iface = None
