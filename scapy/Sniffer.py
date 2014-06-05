@@ -24,7 +24,6 @@ class Sniffer:
     def _process(self, pkt):
         if pkt.payload.addr2 == self.FILTER or pkt.payload.addr2 == "ff:ff:ff:ff:ff:ff":
             eth_frame = Ether() / WARPControlHeader() / pkt.payload
-            eth_frame.show()
             eth_frame.src = self.DEFAULT_SRC
             eth_frame.dst = self.DEFAULT_DST
             sendp(eth_frame, iface = self.DEFAULT_IFACE)
