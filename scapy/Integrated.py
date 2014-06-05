@@ -13,7 +13,7 @@ class WARPControlHeader(Packet):
 #####################################################################################################
 
 WARP = "a0:a1:a2:a3:a4:a5"
-PCEngine = "0a:00:27:00:00:00"
+PCEngine = "c0:c1:c2:c3:c4:c5"
 VWIFI = "02:00:00:00:00:00" #Virtual Wifi Interface
 
 DEFAULT_SRC = WARP
@@ -115,9 +115,10 @@ class WARPDecode:
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        if type(pkt) == Ether:
-            if type(pkt.payload) == WARPControlHeader:
-                outPacket = pkt.payload.payload
+        if type(pkt) == Dot3:
+            Wpacket = WARPControlHeader(str(pkt.payload))
+            if type(Wpacket) == WARPControlHeader:
+                outPacket = Dot11(str(Wpacket.payload))
                 sendp(outPacket, iface=self.out_interface)
             else:
                 print('Error: Malformed WARP Header or Unexpected Type...\nSkipping Packet...')
