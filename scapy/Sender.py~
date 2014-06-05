@@ -12,7 +12,7 @@ class Sender:
 
     DEFAULT_DST = "c0:c1:c2:c3:c4:c5"
     BROADCAST = "ff:ff:ff:ff:ff:ff"
-    DEFAULT_VWFACE = "mon.wlan0"
+    DEFAULT_VWFACE = "hwsim0"
 
     def __init__(self):
         print "init sniffer"
