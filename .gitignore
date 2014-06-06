@@ -70,3 +70,6 @@ ethToWifi
 wifiToEth
 pprocess
 pcrafter
+
+# Temporary Files
+*~
