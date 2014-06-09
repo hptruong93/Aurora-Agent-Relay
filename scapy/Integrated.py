@@ -32,15 +32,22 @@ eth2 = "eth2"
 eth3 = "eth3"
 hwsim0 = "hwsim0"
 
-#####################################################################################################
 
-def getDefaultHeader(src = DEFAULT_SRC, dst = DEFAULT_DST):
+#####################################################################################################
+PROBE_REQUEST = rdpcap("../ProbeRequest.pcap")[0]
+
+#####################################################################################################
+def get_packet_header_in_string(packet):
+    length = len(packet) - len(packet.payload)
+    return str(packet)[0:length]
+
+def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
     output = Ether() / WARPControlHeader()
     output.src = src
     output.dst = dst
     return output
 
-def addWifiInfo(dot11Type, src = WIFISRC, dst = WIFIDST):
+def add_wifi_info(dot11Type, src = WIFISRC, dst = WIFIDST):
     packet = Dot11()
     packet.addr1 = dst
     packet.addr2 = src
@@ -51,25 +58,25 @@ def addWifiInfo(dot11Type, src = WIFISRC, dst = WIFIDST):
 #####################################################################################################
 
 #See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
-def getAssociationRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(0)
+def get_association_request(src = WARP, dst = PCEngine):
+    return get_default_header(src, dst) / add_wifi_info(0)
 
-def getReAssociationRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(2)
+def get_reassociation_request(src = WARP, dst = PCEngine):
+    return get_default_header(src, dst) / add_wifi_info(2)
 
-def getProbeRequest(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(4)
+def get_probe_request(src = WARP, dst = PCEngine):
+    return get_default_header(src, dst) / PROBE_REQUEST
 
-def getDisassociation(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(10)
+def get_disassociation(src = WARP, dst = PCEngine):
+    return get_default_header(src, dst) / add_wifi_info(10)
 
-def getAuthentication(src = WARP, dst = PCEngine):
-    return getDefaultHeader(src, dst) / addWifiInfo(11)
+def get_authentication(src = WARP, dst = PCEngine):
+    return get_default_header(src, dst) / add_wifi_info(11)
 
 #EthernetII assocPkt = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() /   Dot11AssocRequest(WIFIDST, WIFISRC);
 
 #####################################################################################################
-class Sender:#Get message from ethernet and put it into wlan0
+class ToHostapd:#Get message from ethernet and put it into wlan0
 
     def __init__(self, in_interface = eth1, out_interface = DEFAULT_VWFACE):
         print "init sniffer"
@@ -87,7 +94,7 @@ class Sender:#Get message from ethernet and put it into wlan0
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
-class Sniffer:#Get message from hwsim0 and output it to ethernet
+class ToWARP:#Get message from hwsim0 and output it to ethernet
     FILTER = VWIFI
 
     def __init__(self, in_interface = hwsim0, out_interface = eth1, src = WIFISRC, dst = WARP):
@@ -108,7 +115,7 @@ class Sniffer:#Get message from hwsim0 and output it to ethernet
             sendp(eth_frame, iface = self.out_interface)
 
 #####################################################################################################
-class WARPDecode:
+class WARPDecodeFromPC:
     def __init__(self, in_interface = eth3, out_interface = hwsim0):
         print "init WARPDecode"
         self.in_interface = in_interface
@@ -131,33 +138,33 @@ def strip_name(getFunction):
 
 def print_usage():
     print "Usage:"
-    print "f/from_PC --> start processing packets originated from PC"
-    print "t/to_PC --> start processing packets coming to PC from WARP"
-    print "w/WARP_mode --> strip packet headers and forward dot11 management packet to monitor interface"
-    print "s/send to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
-    print "where to_send is one of the following: asc, reasc, probe, disasc, auth"
-    print "iface is the interface"
-    print "src and dst are optional, specifying what src and dst the packet will take. But they must go together (cannot specify just one)"
-    print "loop number is also optional. If none provided then assume infinite loop"
+    print "\tf/from_PC --> start processing packets originated from PC"
+    print "\tt/to_PC --> start processing packets coming to PC from WARP"
+    print "\tw/WARP_mode --> strip packet headers and forward dot11 management packet to monitor interface"
+    print "\ts/send to_send iface [src] [dst] -l/--loop [number] --> send a packet to the desired interface" 
+    print "\t\twhere to_send is one of the following: asc, reasc, probe, disasc, auth"
+    print "\t\tiface is the interface"
+    print "\t\tsrc and dst are optional, specifying what src and dst the packet will take. But they must go together (cannot specify just one)"
+    print "\t\tloop number is also optional. If none provided then assume infinite loop"
 
 if __name__ == '__main__':
     sending = {}
-    sending['asc'] = getAssociationRequest
-    sending['reasc'] = getReAssociationRequest
-    sending['probe'] = getProbeRequest
-    sending['disasc'] = getDisassociation
-    sending['auth'] = getAuthentication
+    sending['asc'] = get_association_request
+    sending['reasc'] = get_reassociation_request
+    sending['probe'] = get_probe_request
+    sending['disasc'] = get_disassociation
+    sending['auth'] = get_authentication
     
     if sys.argv[1] == "--help" or sys.argv[1] == "help" or sys.argv[1] == "-h":
         print_usage()
     elif sys.argv[1] == "f" or sys.argv[1] == "from_PC": #Start processing pkt originated from PC
-        sniffer = Sniffer()
+        sniffer = ToWARP()
         sniffer.sniffing()
     elif sys.argv[1] == "t" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
-        sender = Sender()
+        sender = ToHostapd()
         sender.sniffing()
     elif sys.argv[1] == "w" or sys.argv[1] == "WARP_mode":
-        Wdecode = WARPDecode()
+        Wdecode = WARPDecodeFromPC()
         Wdecode.sniffing()
     elif sys.argv[1] == "s" or sys.argv[1] == "send":
         message_factory = None
