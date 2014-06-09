@@ -46,3 +46,7 @@ def generate(src = "00:11:22:33:44:55", dst = "ff:ff:ff:ff:ff:ff", show = False)
         radioTap.show()
         print "\n"
     return radioTap
+
+if __name__ == "__main__":
+    packet = generate()
+    sendp(packet, iface = 'mon.wlan1', count = 10, inter = 0.1)
