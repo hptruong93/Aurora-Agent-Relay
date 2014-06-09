@@ -32,15 +32,10 @@ eth2 = "eth2"
 eth3 = "eth3"
 hwsim0 = "hwsim0"
 
-
 #####################################################################################################
 PROBE_REQUEST = rdpcap("../ProbeRequest.pcap")[0]
 
 #####################################################################################################
-def get_packet_header_in_string(packet):
-    length = len(packet) - len(packet.payload)
-    return str(packet)[0:length]
-
 def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
     output = Ether() / WARPControlHeader()
     output.src = src
