@@ -38,15 +38,26 @@ bool callback(const PDU &pkt) {
     if (pkt.pdu_type() == pkt.RADIOTAP) {
         //Start processing of RadioTap Packets
         PDU *innerPkt = pkt.inner_pdu();
-        if (innerPkt->pdu_type() == pkt.DOT11_BEACON) {
-            Dot11Beacon &BeaconPkt = innerPkt->rfind_pdu<Dot11Beacon>();
-            Dot11::address_type pktAddr2 = BeaconPkt.addr2();
+        if (innerPkt->pdu_type() == pkt.DOT11_MANAGEMENT) {
+            Dot11ManagementFrame &manPkt = innerPkt->rfind_pdu<Dot11ManagementFrame>();
+            Dot11::address_type pktAddr2 = manPkt.addr2();
             if (pktAddr2 == WLAN0 || pktAddr2 == BROADCAST) {
-                //Add an ethernet frame and send over iface (Include WARP Control Packet)
-                EthernetII packetOut = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() / BeaconPkt;
+                //Add an ethernet frame and send over iface
+                EthernetII packetOut = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() / manPkt;
                 sender.send(packetOut, iface);
             }
         }
+        else if (pkt.pdu_type() == pkt.DOT11_DATA) {
+            Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
+            Dot11::address_type pktAddr2 = dataPkt.addr2();
+            if(pktAddr2 == WLAN0 || pktAddr2 == BROADCAST) {
+                //Add an ethernet frame and send over iface
+                EthernetII packetOut = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() / dataPkt;
+                sender.send(packetOut, iface);
+            }
+        }
+        else //We should not be handling 802.11 Control packets for now
+            cerr << "Inner Layer is not Dot11 Management Frame or Dot11 Data Frame! Skipping..." << endl;
     }
     else
         cerr << "Error: Non RadioTap Packet Detected!" << endl;
