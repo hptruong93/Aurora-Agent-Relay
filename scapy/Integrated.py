@@ -1,6 +1,9 @@
 from scapy.all import *
 import sys
 import traceback
+import association_generator
+import authentication_generator
+import probe_request_generator
 
 class WARPControlHeader(Packet):
     name = "WARPControlHeader"
@@ -33,42 +36,29 @@ eth3 = "eth3"
 hwsim0 = "hwsim0"
 
 #####################################################################################################
-PROBE_REQUEST = rdpcap("../ProbeRequest.pcap")[0]
-
-#####################################################################################################
 def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
     output = Ether() / WARPControlHeader()
     output.src = src
     output.dst = dst
     return output
 
-def add_wifi_info(dot11Type, src = WIFISRC, dst = WIFIDST):
-    packet = Dot11()
-    packet.addr1 = dst
-    packet.addr2 = src
-    packet.type = 0
-    packet.subtype = dot11Type
-    return packet
-
 #####################################################################################################
 
 #See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
-def get_association_request(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / add_wifi_info(0)
+def get_association_request(src = WARP, dst = PCEngine, ssid_input = 'test'):
+    return get_default_header(src, dst) / association_generator.generate(src, dst, ssid = ssid_input)
 
 def get_reassociation_request(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / add_wifi_info(2)
+    return None
 
 def get_probe_request(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / PROBE_REQUEST
+    return get_default_header(src, dst) / probe_request_generator.generate(src, dst)
 
 def get_disassociation(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / add_wifi_info(10)
+    return None
 
 def get_authentication(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / add_wifi_info(11)
-
-#EthernetII assocPkt = EthernetII(ETHDST, ETHSRC) / WARPControlPDU() /   Dot11AssocRequest(WIFIDST, WIFISRC);
+    return get_default_header(src, dst) / authentication_generator.generate(src, dst)
 
 #####################################################################################################
 class ToHostapd:#Get message from ethernet and put it into wlan0
