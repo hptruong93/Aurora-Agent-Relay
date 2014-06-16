@@ -63,7 +63,7 @@ def get_authentication(src = WARP, dst = PCEngine):
 #####################################################################################################
 class ToHostapd:#Get message from ethernet and put it into wlan0
 
-    def __init__(self, in_interface = eth1, out_interface = DEFAULT_VWFACE):
+    def __init__(self, in_interface = "eth4", out_interface = "mon.wlan0"):
         print "init sniffer"
         self.in_interface = in_interface
         self.out_interface = out_interface
@@ -73,16 +73,16 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
 
     def _process(self, pkt):
         #print pkt.dst
-        if pkt.dst == BROADCAST:
-            dot11_frame = RadioTap(RADIO_TAP_HEADER) / Dot11(str(pkt.payload))
-#            print dot11_frame.show()
+        if True:
+            tempWARP = WARPControlHeader(str(pkt.payload))
+            dot11_frame = RadioTap(str(tempWARP.payload))
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
 class ToWARP:#Get message from hwsim0 and output it to ethernet
     FILTER = VWIFI
 
-    def __init__(self, in_interface = hwsim0, out_interface = eth1, src = WIFISRC, dst = WARP):
+    def __init__(self, in_interface = hwsim0, out_interface = "eth4", src = WIFISRC, dst = WARP):
         print "init sniffer"
         self.in_interface = in_interface
         self.out_interface = out_interface
@@ -101,7 +101,7 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
 
 #####################################################################################################
 class WARPDecodeFromPC:
-    def __init__(self, in_interface = eth3, out_interface = hwsim0):
+    def __init__(self, in_interface = "eth4", out_interface = hwsim0):
         print "init WARPDecode"
         self.in_interface = in_interface
         self.out_interface = out_interface
