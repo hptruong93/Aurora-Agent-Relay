@@ -19,7 +19,7 @@ def generate(src = "00:11:22:33:44:55", dst = "02:00:00:000:00:00", show = False
     radioTap = radioTap / element
 
     element = Dot11Auth()
-    element.algo = 1 #Open
+    element.algo = 0 #Open
     element.seqnum = 1 #From device to hostapd
     element.status = 'success'
     radioTap = radioTap / element
