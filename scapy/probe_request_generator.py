@@ -1,20 +1,10 @@
 from scapy.all import *
-import packet_util
-
-_FLAGS = 1
-_RATE = 2
-_CHANNEL = 3
-_ANTENNA_SIGNAL = 5
-_ANTENNA_NOISE = 6
-_ANTENNA = 11
-_DB_ANTENNA_SIGNAL = 12
-_DB_ANTENNA_NOISE = 13
-_RX_FLAG = 14
+import RadioTapHeader as HeaderBits
 
 def generate(src = "00:11:22:33:44:55", dst = "ff:ff:ff:ff:ff:ff", show = False):
     radioTap = RadioTap()
     radioTap.len = 18
-    radioTap.present = ((1 << _FLAGS) | (1 << _RATE) | (1 << _CHANNEL))
+    radioTap.present = ((1 << HeaderBits.FLAGS) | (1 << HeaderBits.RATE) | (1 << HeaderBits.CHANNEL))
     radioTap.notdecoded = '\x00\x02q\t\xa0\x00\xd7\x02\x00\x00' #But what do they mean??
     radioTap = radioTap / Dot11ProbeReq()
 
@@ -49,4 +39,4 @@ def generate(src = "00:11:22:33:44:55", dst = "ff:ff:ff:ff:ff:ff", show = False)
 
 if __name__ == "__main__":
     packet = generate()
-    sendp(packet, iface = 'mon.wlan1', count = 10, inter = 0.1)
+    sendp(packet, iface = 'mon.wlan1', count = 2, inter = 0.1)
