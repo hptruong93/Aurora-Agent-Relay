@@ -46,19 +46,19 @@ def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
 
 #See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
 def get_association_request(src = WARP, dst = PCEngine, ssid_input = 'test'):
-    return get_default_header(src, dst) / association_generator.generate(src, dst, ssid = ssid_input)
+    return get_default_header(src, dst) / association_generator.generate(ssid = ssid_input)
 
 def get_reassociation_request(src = WARP, dst = PCEngine):
     return None
 
 def get_probe_request(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / probe_request_generator.generate(src, dst)
+    return get_default_header(src, dst) / probe_request_generator.generate()
 
 def get_disassociation(src = WARP, dst = PCEngine):
     return None
 
 def get_authentication(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / authentication_generator.generate(src, dst)
+    return get_default_header(src, dst) / authentication_generator.generate()
 
 #####################################################################################################
 class ToHostapd:#Get message from ethernet and put it into wlan0
@@ -101,7 +101,7 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
 
 #####################################################################################################
 class WARPDecodeFromPC:
-    def __init__(self, in_interface = "eth4", out_interface = hwsim0):
+    def __init__(self, in_interface = eth1, out_interface = hwsim0):
         print "init WARPDecode"
         self.in_interface = in_interface
         self.out_interface = out_interface
