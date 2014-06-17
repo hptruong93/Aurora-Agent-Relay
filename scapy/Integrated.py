@@ -68,9 +68,9 @@ def get_authentication(src = WARP, dst = PCEngine):
 class ToHostapd:#Get message from ethernet and put it into wlan0
 
     def __init__(self, in_interface = config.CONFIG['to_hostapd']['in'], out_interface = config.CONFIG['to_hostapd']['out']):
-        print "init sniffer"
-        self.in_interface = in_interface
-        self.out_interface = out_interface
+        print "init to hostapd"
+        self.in_interface = str(in_interface)
+        self.out_interface = str(out_interface)
 
     def sniffing(self):
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
@@ -87,17 +87,18 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
     FILTER = VWIFI
 
     def __init__(self, in_interface = config.CONFIG['to_warp']['in'], out_interface = config.CONFIG['to_warp']['out'], src = WIFISRC, dst = WARP):
-        print "init sniffer"
-        self.in_interface = in_interface
-        self.out_interface = out_interface
-        self.src = src
-        self.dst = dst
+        print "init towarp"
+        self.in_interface = str(in_interface)
+        self.out_interface = str(out_interface)
+        self.src = str(src)
+        self.dst = str(dst)
 
     def sniffing(self):
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        if pkt.payload.addr2 == self.FILTER or pkt.payload.addr2 == BROADCAST:
+        if True or pkt.payload.addr2 == self.FILTER or pkt.payload.addr2 == BROADCAST:
+            #pkt.show()
             eth_frame = Ether() / WARPControlHeader() /str(pkt.payload)
             eth_frame.src = self.src
             eth_frame.dst = self.dst
@@ -107,8 +108,8 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
 class WARPDecodeFromPC:
     def __init__(self, in_interface = config.CONFIG['warp_decode']['in'], out_interface = config.CONFIG['warp_decode']['in']):
         print "init WARPDecode"
-        self.in_interface = in_interface
-        self.out_interface = out_interface
+        self.in_interface = str(in_interface)
+        self.out_interface = str(out_interface)
 
     def sniffing(self):
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
@@ -122,7 +123,7 @@ class WARPDecodeFromPC:
             print('Error: Unexpected type...\nSkipping Packet...')
 #####################################################################################################
 def strip_name(getFunction):
-    return getFunction.__name__[3:]
+    return getFunction.__name__[4:]
 
 
 def print_usage():
