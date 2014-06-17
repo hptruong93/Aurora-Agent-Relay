@@ -1,9 +1,12 @@
+#!/usr/bin/python
+
 from scapy.all import *
 import sys
 import traceback
 import association_generator
 import authentication_generator
 import probe_request_generator
+import config
 
 class WARPControlHeader(Packet):
     name = "WARPControlHeader"
@@ -15,14 +18,14 @@ class WARPControlHeader(Packet):
 
 #####################################################################################################
 
-WARP = "a0:a1:a2:a3:a4:a5"
-PCEngine = "c0:c1:c2:c3:c4:c5"
-VWIFI = "02:00:00:00:00:00" #Virtual Wifi Interface
+WARP = config.CONFIG['general_mac']['WARP']
+PCEngine = config.CONFIG['general_mac']['PC']
+VWIFI = config.CONFIG['general_mac']['PC_WIFI'] #Virtual Wifi Interface
 
 DEFAULT_SRC = WARP
 DEFAULT_DST = PCEngine
 WIFIDST = VWIFI
-WIFISRC = "c0:c1:c2:c3:c4:c5" #Random for now
+WIFISRC = config.CONFIG['general_mac']['WIFI_SRC'] #Random for now
 
 BROADCAST = "ff:ff:ff:ff:ff:ff"
 DEFAULT_VWFACE = "wlan0"
@@ -33,6 +36,7 @@ eth0 = "eth0"
 eth1 = "eth1"
 eth2 = "eth2"
 eth3 = "eth3"
+eth4 = "eth4"
 hwsim0 = "hwsim0"
 
 #####################################################################################################
@@ -45,7 +49,7 @@ def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
 #####################################################################################################
 
 #See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
-def get_association_request(src = WARP, dst = PCEngine, ssid_input = 'test'):
+def get_association_request(src = WARP, dst = PCEngine, ssid_input = config.CONFIG['hostapd']['ssid']):
     return get_default_header(src, dst) / association_generator.generate(ssid = ssid_input)
 
 def get_reassociation_request(src = WARP, dst = PCEngine):
@@ -63,7 +67,7 @@ def get_authentication(src = WARP, dst = PCEngine):
 #####################################################################################################
 class ToHostapd:#Get message from ethernet and put it into wlan0
 
-    def __init__(self, in_interface = "eth4", out_interface = "mon.wlan0"):
+    def __init__(self, in_interface = config.CONFIG['to_hostapd']['in'], out_interface = config.CONFIG['to_hostapd']['out']):
         print "init sniffer"
         self.in_interface = in_interface
         self.out_interface = out_interface
@@ -82,7 +86,7 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
 class ToWARP:#Get message from hwsim0 and output it to ethernet
     FILTER = VWIFI
 
-    def __init__(self, in_interface = hwsim0, out_interface = "eth4", src = WIFISRC, dst = WARP):
+    def __init__(self, in_interface = config.CONFIG['to_warp']['in'], out_interface = config.CONFIG['to_warp']['out'], src = WIFISRC, dst = WARP):
         print "init sniffer"
         self.in_interface = in_interface
         self.out_interface = out_interface
@@ -101,7 +105,7 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
 
 #####################################################################################################
 class WARPDecodeFromPC:
-    def __init__(self, in_interface = eth1, out_interface = hwsim0):
+    def __init__(self, in_interface = config.CONFIG['warp_decode']['in'], out_interface = config.CONFIG['warp_decode']['in']):
         print "init WARPDecode"
         self.in_interface = in_interface
         self.out_interface = out_interface

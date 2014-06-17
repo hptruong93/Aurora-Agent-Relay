@@ -1,7 +1,9 @@
 from scapy.all import *
 import RadioTapHeader as HeaderBits
+import config
 
-def generate(src = "00:11:22:33:44:55", dst = "02:00:00:00:00:00", ssid = 'test', show = False):
+def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG['general_mac']['PC_WIFI'], 
+            ssid = config.CONFIG['hostapd']['ssid'], show = False):
     radioTap = RadioTap()
     radioTap.len = 13
     radioTap.present = (1 << HeaderBits.RATE)
