@@ -6,6 +6,7 @@ import traceback
 import association_generator
 import authentication_generator
 import probe_request_generator
+import RadioTapHeader as radio_tap
 import config
 
 class WARPControlHeader(Packet):
@@ -76,10 +77,16 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
         sniff(iface=self.in_interface, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        #print pkt.dst
-        if True:
-            tempWARP = WARPControlHeader(str(pkt.payload))
-            dot11_frame = RadioTap(str(tempWARP.payload))
+        tempWARP = WARPControlHeader(str(pkt.payload))
+        passing = False
+        try:
+            passing = (pkt.dst != config.CONFIG['general_mac']['WARP'])
+        except Exception as e:
+            traceback.print_exc()
+            passing = False
+        if passing:
+            tempWARP.show()
+            dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
