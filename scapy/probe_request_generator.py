@@ -2,12 +2,15 @@ from scapy.all import *
 import RadioTapHeader as HeaderBits
 import config
 
-def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG['general_mac']['BROADCAST'], show = False):
-    radioTap = RadioTap()
-    radioTap.len = 18
-    radioTap.present = ((1 << HeaderBits.FLAGS) | (1 << HeaderBits.RATE) | (1 << HeaderBits.CHANNEL))
-    radioTap.notdecoded = '\x00\x02q\t\xa0\x00\xd7\x02\x00\x00' #But what do they mean??
-    radioTap = radioTap / Dot11ProbeReq()
+def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG['general_mac']['BROADCAST'], radio_tap_header = False, show = False):
+    if radio_tap_header:
+        radioTap = RadioTap()
+        radioTap.len = 14
+        radioTap.present = ((1 << HeaderBits.FLAGS) | (1 << HeaderBits.RATE) | (1 << HeaderBits.CHANNEL))
+        radioTap.notdecoded = '\x00\x02q\t\xa0\x00' #Flag = 0; Rate = 2 x 500Kbps; Channel frequency = 0x7174, Channel flag = 0xa000
+        radioTap = radioTap / Dot11ProbeReq()
+    else:
+        radioTap = Dot11ProbeReq()
 
     element = Dot11()
     element.subtype = 4
@@ -39,5 +42,5 @@ def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG
     return radioTap
 
 if __name__ == "__main__":
-    packet = generate()
-    sendp(packet, iface = 'mon.wlan1', count = 2, inter = 0.1)
+    packet = generate(src = config.CONFIG['PC_mac']['WLAN0'], radio_tap_header = True, show = True)
+    sendp(packet, iface = 'mon0', count = 1, inter = 0.1)

@@ -3,24 +3,21 @@
 from scapy.all import *
 import sys
 import traceback
+
+import WARPProtocol as WarpHeader
 import association_generator
 import authentication_generator
 import probe_request_generator
-import config
+import RadioTapHeader as radio_tap
 
-class WARPControlHeader(Packet):
-    name = "WARPControlHeader"
-    fields_desc = [ XByteField("power", 0),
-                   XByteField("rate", 1),
-                   XByteField("channel", 1),
-                   XByteField("flag", 2)
-                 ]
+import packet_util
+import config
 
 #####################################################################################################
 
-WARP = config.CONFIG['general_mac']['WARP']
+WARP = config.CONFIG['WARP_mac']['virtual_mac']
 PCEngine = config.CONFIG['general_mac']['PC']
-VWIFI = config.CONFIG['general_mac']['PC_WIFI'] #Virtual Wifi Interface
+VWIFI = config.CONFIG['WARP_mac']['eth_a'] #Virtual Wifi Interface
 
 DEFAULT_SRC = WARP
 DEFAULT_DST = PCEngine
@@ -41,7 +38,7 @@ hwsim0 = "hwsim0"
 
 #####################################################################################################
 def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
-    output = Ether() / WARPControlHeader()
+    output = Ether() / WarpHeader.WARPControlHeader()
     output.src = src
     output.dst = dst
     return output
@@ -73,13 +70,28 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
         self.out_interface = str(out_interface)
 
     def sniffing(self):
-        sniff(iface=self.in_interface, prn=lambda x: self._process(x))
+        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        #print pkt.dst
-        if True:
-            tempWARP = WARPControlHeader(str(pkt.payload))
-            dot11_frame = RadioTap(str(tempWARP.payload))
+        tempWARP = WarpHeader.WARPControlHeader(str(pkt.payload))
+        passing = False
+        try:
+            #Test if this packet comes from the WARP, directed toward the PC ethernet
+            passing = (pkt.dst == config.CONFIG['PC_mac']['ETH']) or (pkt.dst == config.CONFIG['general_mac']['BROADCAST'])
+            if passing:
+            #    print str(pkt.src) + " --> " + str(pkt.dst)
+                pass
+        except Exception as e:
+            traceback.print_exc()
+            passing = False
+        if passing:
+            #try:
+                #x = Dot11(str(tempWARP.payload))
+                #x = packet_util.get_packet_header(tempWARP) / x
+                #x.show()
+            #except:
+                #tempWARP.show() 
+            dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
@@ -94,29 +106,37 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
         self.dst = str(dst)
 
     def sniffing(self):
-        sniff(iface=self.in_interface, prn=lambda x: self._process(x))
+        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
-        if True or pkt.payload.addr2 == self.FILTER or pkt.payload.addr2 == BROADCAST:
-            #pkt.show()
-            eth_frame = Ether() / WARPControlHeader() /str(pkt.payload)
+        if True:
+            try:
+                inner = Dot11(str(pkt.payload))
+                #inner.show()
+                #Check if messaged is from hostapd
+                if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
+                    #inner.show()
+                    return
+            except:
+                return
+            eth_frame = Ether() / WarpHeader.WARPControlHeader() / str(pkt.payload)
             eth_frame.src = self.src
             eth_frame.dst = self.dst
             sendp(eth_frame, iface = self.out_interface)
 
 #####################################################################################################
 class WARPDecodeFromPC:
-    def __init__(self, in_interface = config.CONFIG['warp_decode']['in'], out_interface = config.CONFIG['warp_decode']['in']):
+    def __init__(self, in_interface = config.CONFIG['warp_decode']['in'], out_interface = config.CONFIG['warp_decode']['out']):
         print "init WARPDecode"
         self.in_interface = str(in_interface)
         self.out_interface = str(out_interface)
 
     def sniffing(self):
-        sniff(iface=self.in_interface, prn=lambda x: self._process(x))
+        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
 
     def _process(self, pkt):
         if type(pkt) == Dot3:
-            Wpacket = WARPControlHeader(str(pkt.payload))
+            Wpacket = WarpHeader.WARPControlHeader(str(pkt.payload))
             outPacket = Dot11(str(Wpacket.payload))
             sendp(outPacket, iface=self.out_interface)
         else:

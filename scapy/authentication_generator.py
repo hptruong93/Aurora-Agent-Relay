@@ -2,11 +2,14 @@ from scapy.all import *
 import RadioTapHeader as HeaderBits
 import config
 
-def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG['general_mac']['PC_WIFI'], show = False):
-    radioTap = RadioTap()
-    radioTap.len = 13
-    radioTap.present = (1 << HeaderBits.RATE)
-    radioTap.notdecoded = '\x02\x00\x00\x00\x00' #But what do they mean??
+def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG['WARP_mac']['eth_a'], radio_tap_header = False, show = False):
+    if radio_tap_header:
+        radioTap = RadioTap()
+        radioTap.len = 14
+        radioTap.present = ((1 << HeaderBits.FLAGS) | (1 << HeaderBits.RATE) | (1 << HeaderBits.CHANNEL))
+        radioTap.notdecoded = '\x00\x02q\t\xa0\x00'
+    else:
+        radioTap = None
 
     element = Dot11()
     element.subtype = 11
@@ -17,7 +20,10 @@ def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG
     element.addr3 = dst
     element.SC = 0
     element.addr4 = None
-    radioTap = radioTap / element
+    if radioTap:
+        radioTap = radioTap / element
+    else:
+        radioTap = element
 
     element = Dot11Auth()
     element.algo = 0 #Open
@@ -32,5 +38,5 @@ def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG
     return radioTap
 
 if __name__ == "__main__":
-    packet = generate()
-    sendp(packet, iface = 'mon.wlan1', count = 2, inter = 0.1)
+    packet = generate(src = config.CONFIG['PC_mac']['WLAN0'], radio_tap_header = True, show = True)
+    sendp(packet, iface = 'mon0', count = 1, inter = 0.05)
