@@ -43,4 +43,4 @@ def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG
 
 if __name__ == "__main__":
     packet = generate(src = config.CONFIG['PC_mac']['WLAN0'], radio_tap_header = True, show = True)
-    sendp(packet, iface = 'mon0', count = 1, inter = 0.1)
+    sendp(packet, iface = 'mon0', count = 5, inter = 0.1)

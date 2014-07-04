@@ -85,12 +85,12 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
             traceback.print_exc()
             passing = False
         if passing:
-            #try:
-                #x = Dot11(str(tempWARP.payload))
-                #x = packet_util.get_packet_header(tempWARP) / x
-                #x.show()
-            #except:
-                #tempWARP.show() 
+            try:
+                x = Dot11(str(tempWARP.payload))
+                x = packet_util.get_packet_header(tempWARP) / x
+                x.show()
+            except:
+                tempWARP.show() 
             dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
 
@@ -119,7 +119,16 @@ class ToWARP:#Get message from hwsim0 and output it to ethernet
                     return
             except:
                 return
-            eth_frame = Ether() / WarpHeader.WARPControlHeader() / str(pkt.payload)
+            
+            warp_header = WarpHeader.WARPControlHeader()
+            if inner.addr1 == config.CONFIG['general_mac']['BROADCAST']:
+                warp_header.retry = config.CONFIG['transmission']['retry_broadcast']
+            elif inner.type == 0:
+                warp_header.retry = config.CONFIG['transmission']['retry_management']
+            else:
+                warp_header.retry = config.CONFIG['transmission']['retry_data']
+                
+            eth_frame = Ether() / warp_header / inner
             eth_frame.src = self.src
             eth_frame.dst = self.dst
             sendp(eth_frame, iface = self.out_interface)
@@ -167,13 +176,13 @@ if __name__ == '__main__':
     
     if sys.argv[1] == "--help" or sys.argv[1] == "help" or sys.argv[1] == "-h":
         print_usage()
-    elif sys.argv[1] == "f" or sys.argv[1] == "from_PC": #Start processing pkt originated from PC
+    elif sys.argv[1] == "f" or sys.argv[1] == "from" or sys.argv[1] == "from_PC": #Start processing pkt originated from PC
         sniffer = ToWARP()
         sniffer.sniffing()
-    elif sys.argv[1] == "t" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
+    elif sys.argv[1] == "t" or sys.argv[1] == "to" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
         sender = ToHostapd()
         sender.sniffing()
-    elif sys.argv[1] == "w" or sys.argv[1] == "WARP_mode":
+    elif sys.argv[1] == "w" or sys.argv[1] == "warp" or sys.argv[1] == "WARP_mode":
         Wdecode = WARPDecodeFromPC()
         Wdecode.sniffing()
     elif sys.argv[1] == "s" or sys.argv[1] == "send":
