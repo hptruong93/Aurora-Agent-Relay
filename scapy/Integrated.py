@@ -5,29 +5,16 @@ import sys
 import traceback
 
 import WARPProtocol as WarpHeader
-import association_generator
-import authentication_generator
-import probe_request_generator
 import RadioTapHeader as radio_tap
 
+import Sniffer
+import packet_factory as factory
 import packet_util
 import config
 
 #####################################################################################################
-
-WARP = config.CONFIG['WARP_mac']['virtual_mac']
-PCEngine = config.CONFIG['general_mac']['PC']
-VWIFI = config.CONFIG['WARP_mac']['eth_a'] #Virtual Wifi Interface
-
-DEFAULT_SRC = WARP
-DEFAULT_DST = PCEngine
-WIFIDST = VWIFI
-WIFISRC = config.CONFIG['general_mac']['WIFI_SRC'] #Random for now
-
-BROADCAST = "ff:ff:ff:ff:ff:ff"
 DEFAULT_VWFACE = "wlan0"
 DEAFULT_IFACE = "eth3"
-RADIO_TAP_HEADER = "\x00\x00\x0e\x00\x0e\x00\x00\x00\x00\x02\x80\t\xa0\x00"
 
 eth0 = "eth0"
 eth1 = "eth1"
@@ -37,42 +24,13 @@ eth4 = "eth4"
 hwsim0 = "hwsim0"
 
 #####################################################################################################
-def get_default_header(src = DEFAULT_SRC, dst = DEFAULT_DST):
-    output = Ether() / WarpHeader.WARPControlHeader()
-    output.src = src
-    output.dst = dst
-    return output
-
-#####################################################################################################
-
-#See more on https://github.com/d1b/scapy/blob/master/scapy/layers/dot11.py
-def get_association_request(src = WARP, dst = PCEngine, ssid_input = config.CONFIG['hostapd']['ssid']):
-    return get_default_header(src, dst) / association_generator.generate(ssid = ssid_input)
-
-def get_reassociation_request(src = WARP, dst = PCEngine):
-    return None
-
-def get_probe_request(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / probe_request_generator.generate()
-
-def get_disassociation(src = WARP, dst = PCEngine):
-    return None
-
-def get_authentication(src = WARP, dst = PCEngine):
-    return get_default_header(src, dst) / authentication_generator.generate()
-
-#####################################################################################################
-class ToHostapd:#Get message from ethernet and put it into wlan0
+class ToHostapd(Sniffer.Sniffer):#Get message from ethernet and put it into wlan0
 
     def __init__(self, in_interface = config.CONFIG['to_hostapd']['in'], out_interface = config.CONFIG['to_hostapd']['out']):
-        print "init to hostapd"
-        self.in_interface = str(in_interface)
-        self.out_interface = str(out_interface)
+        print "init tohostapd"
+        super(ToHostapd, self).__init__(str(in_interface), str(out_interface))
 
-    def sniffing(self):
-        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
-
-    def _process(self, pkt):
+    def process(self, pkt):
         tempWARP = WarpHeader.WARPControlHeader(str(pkt.payload))
         passing = False
         try:
@@ -86,64 +44,54 @@ class ToHostapd:#Get message from ethernet and put it into wlan0
             passing = False
         if passing:
             try:
-                x = Dot11(str(tempWARP.payload))
-                x = packet_util.get_packet_header(tempWARP) / x
-                x.show()
+                inner = Dot11(str(tempWARP.payload))
+                inner = packet_util.get_packet_header(tempWARP) / inner
+                inner.show()
             except:
                 tempWARP.show() 
             dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
 
 #####################################################################################################
-class ToWARP:#Get message from hwsim0 and output it to ethernet
-    FILTER = VWIFI
+class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
 
-    def __init__(self, in_interface = config.CONFIG['to_warp']['in'], out_interface = config.CONFIG['to_warp']['out'], src = WIFISRC, dst = WARP):
+    def __init__(self, in_interface = config.CONFIG['to_warp']['in'], out_interface = config.CONFIG['to_warp']['out'], src = config.WIFISRC, dst = config.WARP):
         print "init towarp"
-        self.in_interface = str(in_interface)
-        self.out_interface = str(out_interface)
         self.src = str(src)
         self.dst = str(dst)
+        super(ToWARP, self).__init__(str(in_interface), str(out_interface))
 
-    def sniffing(self):
-        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
-
-    def _process(self, pkt):
-        if True:
-            try:
-                inner = Dot11(str(pkt.payload))
+    def process(self, pkt):
+        try:
+            inner = Dot11(str(pkt.payload))
+            #inner.show()
+            #Check if messaged is from hostapd
+            if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
                 #inner.show()
-                #Check if messaged is from hostapd
-                if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
-                    #inner.show()
-                    return
-            except:
                 return
+        except:
+            return
+        
+        warp_header = WarpHeader.WARPControlHeader()
+        if inner.addr1 == config.CONFIG['general_mac']['BROADCAST']:
+            warp_header.retry = config.CONFIG['transmission']['retry_broadcast']
+        elif inner.type == 0:
+            warp_header.retry = config.CONFIG['transmission']['retry_management']
+        else:
+            warp_header.retry = config.CONFIG['transmission']['retry_data']
             
-            warp_header = WarpHeader.WARPControlHeader()
-            if inner.addr1 == config.CONFIG['general_mac']['BROADCAST']:
-                warp_header.retry = config.CONFIG['transmission']['retry_broadcast']
-            elif inner.type == 0:
-                warp_header.retry = config.CONFIG['transmission']['retry_management']
-            else:
-                warp_header.retry = config.CONFIG['transmission']['retry_data']
-                
-            eth_frame = Ether() / warp_header / inner
-            eth_frame.src = self.src
-            eth_frame.dst = self.dst
-            sendp(eth_frame, iface = self.out_interface)
+        eth_frame = Ether() / warp_header / inner
+        eth_frame.src = self.src
+        eth_frame.dst = self.dst
+        sendp(eth_frame, iface = self.out_interface)
 
 #####################################################################################################
-class WARPDecodeFromPC:
+class WARPDecodeFromPC(Sniffer.Sniffer):
     def __init__(self, in_interface = config.CONFIG['warp_decode']['in'], out_interface = config.CONFIG['warp_decode']['out']):
         print "init WARPDecode"
-        self.in_interface = str(in_interface)
-        self.out_interface = str(out_interface)
+        super(WARPDecodeFromPC, self).__init__(str(in_interface), str(out_interface))
 
-    def sniffing(self):
-        sniff(iface=self.in_interface, store = 0, prn=lambda x: self._process(x))
-
-    def _process(self, pkt):
+    def process(self, pkt):
         if type(pkt) == Dot3:
             Wpacket = WarpHeader.WARPControlHeader(str(pkt.payload))
             outPacket = Dot11(str(Wpacket.payload))
@@ -168,11 +116,11 @@ def print_usage():
 
 if __name__ == '__main__':
     sending = {}
-    sending['asc'] = get_association_request
-    sending['reasc'] = get_reassociation_request
-    sending['probe'] = get_probe_request
-    sending['disasc'] = get_disassociation
-    sending['auth'] = get_authentication
+    sending['asc'] = factory.get_association_request
+    sending['reasc'] = factory.get_reassociation_request
+    sending['probe'] = factory.get_probe_request
+    sending['disasc'] = factory.get_disassociation
+    sending['auth'] = factory.get_authentication
     
     if sys.argv[1] == "--help" or sys.argv[1] == "help" or sys.argv[1] == "-h":
         print_usage()
