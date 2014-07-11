@@ -31,17 +31,21 @@ class ToHostapd(Sniffer.Sniffer):#Get message from ethernet and put it into wlan
         super(ToHostapd, self).__init__(str(in_interface), str(out_interface))
 
     def process(self, pkt):
-        tempWARP = WarpHeader.WARPControlHeader(str(pkt.payload))
+        tempWARP = WarpHeader.WARPHeader(str(pkt.payload))
+        if tempWARP.type != WarpHeader.TYPE_DEF['transmit']:
+            return
+        tempWARP = WarpHeader.Transmit(str(tempWARP.payload))
         passing = False
+        
         try:
             #Test if this packet comes from the WARP, directed toward the PC ethernet
             passing = (pkt.dst == config.CONFIG['PC_mac']['ETH']) or (pkt.dst == config.CONFIG['general_mac']['BROADCAST'])
-            if passing:
+            #if passing:
             #    print str(pkt.src) + " --> " + str(pkt.dst)
-                pass
         except Exception as e:
             traceback.print_exc()
             passing = False
+            
         if passing:
             try:
                 inner = Dot11(str(tempWARP.payload))
@@ -72,13 +76,16 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         except:
             return
         
-        warp_header = WarpHeader.WARPControlHeader()
+        warp_header = WarpHeader.WARPHeader()
+        warp_header.type = 'transmit'
+        
+        warp_header = warp_header / WarpHeader.Transmit()
         if inner.addr1 == config.CONFIG['general_mac']['BROADCAST']:
-            warp_header.retry = config.CONFIG['transmission']['retry_broadcast']
+            warp_header.payload.retry = config.CONFIG['transmission']['retry_broadcast']
         elif inner.type == 0:
-            warp_header.retry = config.CONFIG['transmission']['retry_management']
+            warp_header.payload.retry = config.CONFIG['transmission']['retry_management']
         else:
-            warp_header.retry = config.CONFIG['transmission']['retry_data']
+            warp_header.payload.retry = config.CONFIG['transmission']['retry_data']
             
         eth_frame = Ether() / warp_header / inner
         eth_frame.src = self.src
@@ -93,7 +100,7 @@ class WARPDecodeFromPC(Sniffer.Sniffer):
 
     def process(self, pkt):
         if type(pkt) == Dot3:
-            Wpacket = WarpHeader.WARPControlHeader(str(pkt.payload))
+            Wpacket = WarpHeader.Transmit(str(pkt.payload))
             outPacket = Dot11(str(Wpacket.payload))
             sendp(outPacket, iface=self.out_interface)
         else:

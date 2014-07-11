@@ -8,7 +8,7 @@ import probe_request_generator
 
 #####################################################################################################
 def get_default_header(src = config.WARP, dst = config.PCEngine):
-    output = Ether() / WarpHeader.WARPControlHeader()
+    output = Ether() / WarpHeader.Transmit()
     output.src = src
     output.dst = dst
     return output

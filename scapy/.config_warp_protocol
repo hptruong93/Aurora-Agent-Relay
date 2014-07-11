@@ -1,0 +1,58 @@
+{
+    "header": {
+        "type": {
+            "default": 0,
+            "definition": {
+                "0": "ignore",
+                "1": "transmit",
+                "2": "control"
+            }
+        },
+        "subtype": {
+            "default": 0,
+            "definition": {
+                "transmit": {},
+                "control": {
+                    "0": "ignore",
+                    "1": "transmission_control",
+                    "2": "mac_address_control"
+                }
+            }
+        }
+    },
+    "transmit": {
+        "power": {
+            "default": 0
+        },
+        "rate": {
+            "default": 1
+        },
+        "channel": {
+            "default": 1
+        },
+        "flag": {
+            "default": 2
+        },
+        "retry": {
+            "default": 0
+        }
+    },
+    "MAC_control": {
+        "operation": {
+            "default": 0,
+            "definition": {
+                "0": "do_nothing",
+                "1": "add",
+                "32": "remove",
+                "64": "check",
+                "65": "existing",
+                "66": "not_existing"
+            }
+        },
+        "mac_address": {
+            "default": "00:00:00:00:00:00"
+        }
+    },
+    "transmission_control": {
+    }
+}
