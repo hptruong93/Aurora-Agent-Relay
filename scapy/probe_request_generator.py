@@ -38,9 +38,10 @@ def generate(src = config.CONFIG['general_mac']['WIFI_SRC'], dst = config.CONFIG
     if show:
         print "\nGenerated Probe request:"
         radioTap.show()
+        hexdump(radioTap)
         print "\n"
     return radioTap
 
 if __name__ == "__main__":
     packet = generate(src = config.CONFIG['PC_mac']['WLAN0'], radio_tap_header = True, show = True)
-    sendp(packet, iface = 'mon0', count = 5, inter = 0.1)
+    sendp(packet, iface = 'mon.wlan1', count = 5000, inter = 0.1)

@@ -1,4 +1,8 @@
 from scapy.all import *
+import time
+
+def current_milli():
+    return int(round(time.time() * 1000))
 
 def get_packet_header(packet):
     return packet.__class__(_get_packet_header_in_string(packet))

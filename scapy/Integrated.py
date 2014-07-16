@@ -15,7 +15,6 @@ import config
 #####################################################################################################
 DEFAULT_VWFACE = "wlan0"
 DEAFULT_IFACE = "eth3"
-
 eth0 = "eth0"
 eth1 = "eth1"
 eth2 = "eth2"
@@ -31,30 +30,41 @@ class ToHostapd(Sniffer.Sniffer):#Get message from ethernet and put it into wlan
         super(ToHostapd, self).__init__(str(in_interface), str(out_interface))
 
     def process(self, pkt):
-        tempWARP = WarpHeader.WARPHeader(str(pkt.payload))
-        if tempWARP.type != WarpHeader.TYPE_DEF['transmit']:
-            return
-        tempWARP = WarpHeader.Transmit(str(tempWARP.payload))
-        passing = False
-        
+        to_me = False
         try:
             #Test if this packet comes from the WARP, directed toward the PC ethernet
-            passing = (pkt.dst == config.CONFIG['PC_mac']['ETH']) or (pkt.dst == config.CONFIG['general_mac']['BROADCAST'])
-            #if passing:
+            to_me = (pkt.dst == config.CONFIG['PC_mac']['ETH']) or (pkt.dst == config.CONFIG['general_mac']['BROADCAST'])
+            #if to_me:
             #    print str(pkt.src) + " --> " + str(pkt.dst)
         except Exception as e:
             traceback.print_exc()
-            passing = False
-            
-        if passing:
+            to_me = False
+
+        if to_me:
+            tempWARP = WarpHeader.WARPHeader(str(pkt.payload))
+            if int(tempWARP.type) != int(WarpHeader.TYPE_DEF['transmit']):
+                return
+            tempWARP = WarpHeader.Transmit(str(tempWARP.payload))
+
             try:
                 inner = Dot11(str(tempWARP.payload))
                 inner = packet_util.get_packet_header(tempWARP) / inner
-                inner.show()
+                #inner.show()
+                #hexdump(inner)
+                pass
             except:
                 tempWARP.show() 
+                pass
+            
             dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
+            #self.socket.send(dot11_frame)
+            try:
+                pass
+                #if tempWARP.payload.type != 0:
+                #    sendp(dot11_frame, iface = 'wlan1')
+            except:
+                pass
 
 #####################################################################################################
 class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
@@ -63,12 +73,26 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         print "init towarp"
         self.src = str(src)
         self.dst = str(dst)
+        
+        self.warp_header = WarpHeader.WARPHeader()
+        self.warp_header.type = 'transmit'
+        
+        self.count = 0
+        self.last = packet_util.current_milli()
+        
         super(ToWARP, self).__init__(str(in_interface), str(out_interface))
 
     def process(self, pkt):
         try:
             inner = Dot11(str(pkt.payload))
+
+            #if inner.subtype == 5 and str(inner.addr1)[-2:] == "8c" and in_interface != 'hwsim0':
+                #current_time = packet_util.current_milli()
+                #self.count += 1
+                #print "Average = %s" % (1000 * float (self.count) / (current_time - self.last))
+
             #inner.show()
+            #hexdump(inner)
             #Check if messaged is from hostapd
             if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
                 #inner.show()
@@ -76,21 +100,27 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         except:
             return
         
-        warp_header = WarpHeader.WARPHeader()
-        warp_header.type = 'transmit'
         
-        warp_header = warp_header / WarpHeader.Transmit()
+        warp_header = self.warp_header / WarpHeader.Transmit()
         if inner.addr1 == config.CONFIG['general_mac']['BROADCAST']:
             warp_header.payload.retry = config.CONFIG['transmission']['retry_broadcast']
         elif inner.type == 0:
             warp_header.payload.retry = config.CONFIG['transmission']['retry_management']
         else:
             warp_header.payload.retry = config.CONFIG['transmission']['retry_data']
-            
+	
+        #inner.show()
         eth_frame = Ether() / warp_header / inner
         eth_frame.src = self.src
         eth_frame.dst = self.dst
-        sendp(eth_frame, iface = self.out_interface)
+        #sendp(eth_frame, iface = self.out_interface, verbose = 0)
+        self.socket.send(eth_frame)
+        
+    def sniffing(self):
+        if in_interface == 'hwsim0':
+            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = 'type 0 subtype 8')
+        else:
+            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = 'type 0')
 
 #####################################################################################################
 class WARPDecodeFromPC(Sniffer.Sniffer):
@@ -132,10 +162,22 @@ if __name__ == '__main__':
     if sys.argv[1] == "--help" or sys.argv[1] == "help" or sys.argv[1] == "-h":
         print_usage()
     elif sys.argv[1] == "f" or sys.argv[1] == "from" or sys.argv[1] == "from_PC": #Start processing pkt originated from PC
-        sniffer = ToWARP()
+        sniffer = None
+        if len(sys.argv) == 4:
+            in_interface = sys.argv[2]
+            out_interface = sys.argv[3]
+            sniffer = ToWARP(in_interface = in_interface, out_interface = out_interface)
+        else:
+            sniffer = ToWARP()
         sniffer.sniffing()
     elif sys.argv[1] == "t" or sys.argv[1] == "to" or sys.argv[1] == "to_PC": #Start processing pkt sent to PC from Warp
-        sender = ToHostapd()
+        sender = None
+        if len(sys.argv) == 4:
+            in_interface = sys.argv[2]
+            out_interface = sys.argv[3]
+            sender = ToHostapd(in_interface = in_interface, out_interface = out_interface)
+        else:
+            sender = ToHostapd()
         sender.sniffing()
     elif sys.argv[1] == "w" or sys.argv[1] == "warp" or sys.argv[1] == "WARP_mode":
         Wdecode = WARPDecodeFromPC()
