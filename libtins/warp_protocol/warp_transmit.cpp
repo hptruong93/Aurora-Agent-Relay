@@ -64,5 +64,4 @@ namespace Tins {
 #endif
         memcpy(buffer, &_WARP_transmit, sizeof(WARP_transmit_struct));
     }
-    
 }
