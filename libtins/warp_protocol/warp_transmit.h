@@ -9,7 +9,7 @@ namespace Tins {
     class WARP_transmit: public PDU {
     public:
         
-        static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
+        static const PDU::PDUType pdu_flag = PDU::PDUType::USER_DEFINED_PDU;
 
         //Constructor with Parameters (Default: power = 1, rate = 1, channel = 1, flag = 2
         WARP_transmit(uint8_t power_param = 0, uint8_t rate_param = 1, uint8_t channel_param = 1, uint8_t flag_param = 2, uint8_t retry = 0);
