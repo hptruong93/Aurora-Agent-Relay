@@ -84,6 +84,7 @@ bool process(PDU &pkt) {
 
                 //-----------------> Clean up
                 delete warp_layer;
+                cout << "Sent 1 packet" << endl;
             }
         } else if (pkt.pdu_type() == pkt.DOT11_DATA) {
             Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
@@ -108,6 +109,7 @@ bool process(PDU &pkt) {
 
                 //-----------------> Clean up
                 delete warp_layer;
+                cout << "Sent 1 packet" << endl;
             }
         } else {//We should not be handling 802.11 Control packets for now
             cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;

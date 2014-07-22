@@ -52,7 +52,7 @@ namespace Tins {
         
         void write_serialization(uint8_t *data, uint32_t total_sz, const PDU *parent);
     
-        uint8_t* get_buffer() const {
+        uint8_t* get_buffer() {
             return buffer;
         }
 

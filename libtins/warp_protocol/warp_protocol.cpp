@@ -10,7 +10,7 @@
 namespace Tins {
     
 	uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer) {
-		return 5;
+		return 7;
 	}
 
 	WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info) {
@@ -50,7 +50,6 @@ namespace Tins {
 
     WARP_protocol::WARP_protocol(const uint8_t *data, uint32_t total_sz) {
     	buffer = (uint8_t*) std::malloc(total_sz);
-
     	size = total_sz;
     	for (uint32_t i = 0; i < total_sz; i++) {
     		buffer[i] = data[i];
