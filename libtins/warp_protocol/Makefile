@@ -5,7 +5,7 @@ LFLAGS = -O3 -std=c++0x -lpthread -ltins -lpcap -Wall
 all : test
 
 test : warp_transmit.o warp_protocol.o test.o
-	$(CC) warp_transmit.o warp_protocol.o test.o $(LFLAGS) -o test
+	$(CC) warp_transmit.o warp_protocol.o test.o $(LFLAGS) -o test.out
 
 test.o : test.cpp
 	$(CC) test.cpp $(CFLAGS) -o test.o

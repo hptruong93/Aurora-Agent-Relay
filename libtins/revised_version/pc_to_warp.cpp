@@ -3,7 +3,7 @@
 
 #include "config.h"
 #include <tins/tins.h>
-
+#include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
 using namespace Config;
@@ -66,16 +66,48 @@ bool process(PDU &pkt) {
             Dot11::address_type source = management_frame.addr2();
             if (source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface
-                EthernetII to_send = EthernetII(WARP, PC_ENGINE) / management_frame;
+                EthernetII to_send = EthernetII(WARP, PC_ENGINE);
+                
+                //-----------------> Create WARP transmit info
+                WARP_protocol::WARP_transmit_struct transmit_info;
+                transmit_info.power = DEFAULT_TRANSMIT_POWER;
+                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
+                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
+                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
+                transmit_info.retry = (source == BROADCAST) ? 0 : 7;
+
+                //-----------------> Create WARP layer and append at the end
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
+                to_send = to_send / (*warp_layer) / management_frame;
+
                 sender->send(to_send);
+
+                //-----------------> Clean up
+                delete warp_layer;
             }
         } else if (pkt.pdu_type() == pkt.DOT11_DATA) {
             Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
             Dot11::address_type source = dataPkt.addr2();
             if(source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface to warp
-                EthernetII packetOut = EthernetII(WARP, PC_ENGINE) / dataPkt;
-                sender->send(packetOut);
+                EthernetII to_send = EthernetII(WARP, PC_ENGINE);
+
+                //-----------------> Create WARP transmit info
+                WARP_protocol::WARP_transmit_struct transmit_info;
+                transmit_info.power = DEFAULT_TRANSMIT_POWER;
+                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
+                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
+                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
+                transmit_info.retry = 7;
+
+                //-----------------> Create WARP layer and append at the end
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
+                to_send = to_send / (*warp_layer) / dataPkt;
+
+                sender->send(to_send);
+
+                //-----------------> Clean up
+                delete warp_layer;
             }
         } else {//We should not be handling 802.11 Control packets for now
             cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;
