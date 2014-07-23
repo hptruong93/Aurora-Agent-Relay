@@ -9,6 +9,8 @@ using namespace Tins;
 using namespace Config;
 using namespace std;
 
+#define WARP_LAYER_ENABLE
+
 PacketSender *sender;
 string in_interface;
 
@@ -64,26 +66,50 @@ bool process(PDU &pkt) {
 
             Dot11ManagementFrame &management_frame = innerPkt->rfind_pdu<Dot11ManagementFrame>();
             Dot11::address_type source = management_frame.addr2();
+            Dot11::address_type dest = management_frame.addr1();
+
             if (source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface
                 EthernetII to_send = EthernetII(WARP, PC_ENGINE);
-                
+                to_send.payload_type(WARP_PROTOCOL_TYPE);
+
+#ifdef WARP_LAYER_ENABLE
                 //-----------------> Create WARP transmit info
                 WARP_protocol::WARP_transmit_struct transmit_info;
                 transmit_info.power = DEFAULT_TRANSMIT_POWER;
                 transmit_info.rate = DEFAULT_TRANSMIT_RATE;
                 transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
                 transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-                transmit_info.retry = (source == BROADCAST) ? 0 : 7;
+                transmit_info.retry = (dest == BROADCAST) ? 0 : MAX_RETRY;
+                transmit_info.payload_size = (uint8_t) management_frame.size();
 
                 //-----------------> Create WARP layer and append at the end
                 WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
-                to_send = to_send / (*warp_layer) / management_frame;
+
+                // uint8_t* pad_buf;
+                // uint32_t total_size = management_frame.size() + warp_layer->header_size();
+                // if (total_size < 46) {
+                //     uint32_t pad_size = 46 - total_size + warp_layer->header_size();
+                //     pad_buf = (uint8_t*) malloc(pad_size);
+                //     memset(pad_buf, 0, pad_size);
+                //     to_send = to_send / (*warp_layer) / management_frame / RawPDU(pad_buf, pad_size);
+                // } else {
+                    to_send = to_send / (*warp_layer) / management_frame;
+                // }
+                
+#else
+                to_send = to_send / management_frame;
+#endif
 
                 sender->send(to_send);
 
                 //-----------------> Clean up
+#ifdef WARP_LAYER_ENABLE
                 delete warp_layer;
+                // if (total_size < 46) {
+                //    std::free(pad_buf);
+                // }
+#endif
                 cout << "Sent 1 packet" << endl;
             }
         } else if (pkt.pdu_type() == pkt.DOT11_DATA) {
@@ -92,7 +118,9 @@ bool process(PDU &pkt) {
             if(source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface to warp
                 EthernetII to_send = EthernetII(WARP, PC_ENGINE);
+                to_send.payload_type(WARP_PROTOCOL_TYPE);
 
+#ifdef WARP_LAYER_ENABLE
                 //-----------------> Create WARP transmit info
                 WARP_protocol::WARP_transmit_struct transmit_info;
                 transmit_info.power = DEFAULT_TRANSMIT_POWER;
@@ -104,11 +132,16 @@ bool process(PDU &pkt) {
                 //-----------------> Create WARP layer and append at the end
                 WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
                 to_send = to_send / (*warp_layer) / dataPkt;
+#else
+                to_send = to_send / dataPkt;
+#endif
 
                 sender->send(to_send);
 
                 //-----------------> Clean up
+#ifdef WARP_LAYER_ENABLE
                 delete warp_layer;
+#endif
                 cout << "Sent 1 packet" << endl;
             }
         } else {//We should not be handling 802.11 Control packets for now

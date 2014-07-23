@@ -22,7 +22,7 @@ bool process(PDU &pkt) {
         WARP_protocol &warp_layer = ethernet_packet.rfind_pdu<WARP_protocol>();
         //cout << "Found protocol" << endl;
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
-        uint32_t processed_bytes = WARP_protocol::process_warp_layer(warp_layer_buffer + 0); 
+        uint32_t processed_bytes = WARP_protocol::process_warp_layer(warp_layer_buffer); 
 
         RawPDU payload(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
         //cout << "Here" << endl;

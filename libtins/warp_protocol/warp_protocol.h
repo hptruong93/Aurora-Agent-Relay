@@ -26,6 +26,7 @@ namespace Tins {
             uint8_t channel;
             uint8_t flag;
             uint8_t retry;
+            uint8_t payload_size;
         };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
@@ -37,7 +38,7 @@ namespace Tins {
         static WARP_protocol* create_mac_control(uint8_t operation_code, uint8_t* mac_address);
 
         //Constructor with buffer
-        WARP_protocol(const uint8_t *buffer, uint32_t total_sz);
+        WARP_protocol(const uint8_t *data, uint32_t total_sz);
         
         ~WARP_protocol();
 

@@ -7,11 +7,14 @@ INC = -I$(WARP_PROTOCOL_DIR)
 
 all : pc_to_warp warp_to_pc
 
-pc_to_warp : pc_to_warp.cpp
-	$(CC) pc_to_warp.cpp $(CFLAGS) -o pc_to_warp.out
+pc_to_warp : warp_protocol.o pc_to_warp.o
+	$(CC) warp_protocol.o pc_to_warp.o $(LFLAGS) -o pc_to_warp.out
 
 warp_to_pc : warp_protocol.o warp_to_pc.o 
 	$(CC) warp_to_pc.o warp_protocol.o $(LFLAGS) -o warp_to_pc.out
+
+pc_to_warp.o : pc_to_warp.cpp
+	$(CC) pc_to_warp.cpp $(CFLAGS) -o pc_to_warp.o
 
 warp_to_pc.o : warp_to_pc.cpp
 	$(CC) warp_to_pc.cpp $(CFLAGS) -o warp_to_pc.o
