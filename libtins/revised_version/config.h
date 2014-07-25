@@ -4,7 +4,7 @@
 #include "tins/tins.h"
 
 #define WARP_PROTOCOL_TYPE                  0x8ae
-#define MAX_RETRY							5
+#define MAX_RETRY							7
 
 namespace Config {
     

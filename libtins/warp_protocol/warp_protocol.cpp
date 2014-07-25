@@ -16,7 +16,7 @@ namespace Tins {
     }
 
     WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info) {
-        uint8_t buffer[8];
+        uint8_t buffer[9];
 
         //Header
         buffer[0] = 0x01;
@@ -28,9 +28,10 @@ namespace Tins {
         buffer[4] = info->channel;
         buffer[5] = info->flag;
         buffer[6] = info->retry;
-        buffer[7] = info->payload_size;
+        buffer[7] = (info->payload_size >> 8) & 0xff;
+        buffer[8] = info->payload_size & 0xff;
 
-        return new WARP_protocol(buffer, 8);
+        return new WARP_protocol(buffer, 9);
     }
 
     WARP_protocol* WARP_protocol::create_mac_control(uint8_t operation_code, uint8_t* mac_address) {

@@ -81,7 +81,7 @@ bool process(PDU &pkt) {
                 transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
                 transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
                 transmit_info.retry = (dest == BROADCAST) ? 0 : MAX_RETRY;
-                transmit_info.payload_size = (uint8_t) management_frame.size();
+                transmit_info.payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Create WARP layer and append at the end
                 WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);

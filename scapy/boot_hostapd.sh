@@ -1,6 +1,6 @@
 #!/bin/bash
 
-modprobe -r mac80210_hwsim
+modprobe -r mac80211_hwsim
 ifconfig wlan0 down
 ifconfig wlan0 up
 

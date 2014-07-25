@@ -10,7 +10,7 @@
 #define DEFAULT_TRANSMIT_POWER                        0
 #define DEFAULT_TRANSMIT_RATE                         1
 #define DEFAULT_TRANSMIT_CHANNEL                      1
-#define DEFAULT_TRANSMIT_FLAG                         2
+#define DEFAULT_TRANSMIT_FLAG                         0
 #define DEFAULT_TRANSMIT_RETRY                        0
 
 
@@ -26,7 +26,7 @@ namespace Tins {
             uint8_t channel;
             uint8_t flag;
             uint8_t retry;
-            uint8_t payload_size;
+            uint16_t payload_size;
         };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
