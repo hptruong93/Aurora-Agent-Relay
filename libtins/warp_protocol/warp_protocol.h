@@ -7,11 +7,26 @@
  
 #define WARP_PROTOCOL_HEADER_LENGTH                   2
 
+#define TYPE_INDEX                                    0
+#define SUBTYPE_INDEX                                 1
+
+#define TYPE_TRANSMIT                                 1
+#define TYPE_CONTROL                                  2
+
+#define TRANSMIT_ELEMENT_LENGTH                       7
+#define MAC_CONTROL_ELEMENT_LENGTH                    7
+
+#define SUBTYPE_TRANSMISSION_CONTROL                  1
+#define SUBTYPE_MAC_ADDRESS_CONTROL                   2
+
+
 #define DEFAULT_TRANSMIT_POWER                        0
 #define DEFAULT_TRANSMIT_RATE                         1
 #define DEFAULT_TRANSMIT_CHANNEL                      1
 #define DEFAULT_TRANSMIT_FLAG                         0
 #define DEFAULT_TRANSMIT_RETRY                        0
+
+
 
 
 namespace Tins {

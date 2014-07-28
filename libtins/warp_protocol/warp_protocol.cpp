@@ -12,15 +12,19 @@ using namespace std;
 namespace Tins {
     
     uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer) {
-        return 7;
+        if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
+            return 9;
+        } else {
+            return 0;
+        }
     }
 
     WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info) {
         uint8_t buffer[9];
 
         //Header
-        buffer[0] = 0x01;
-        buffer[1] = 0x00;
+        buffer[TYPE_INDEX] = 0x01;
+        buffer[SUBTYPE_INDEX] = 0x00;
 
         //Transmit
         buffer[2] = info->power;
@@ -38,12 +42,12 @@ namespace Tins {
         uint8_t buffer[9];
 
         //Header
-        buffer[0] = 0x02;
-        buffer[1] = 0x02;
+        buffer[TYPE_INDEX] = 0x02;
+        buffer[SUBTYPE_INDEX] = 0x02;
 
         //MAC control
         buffer[2] = operation_code;
-        memcpy(buffer + 3, mac_address, 6);
+        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, mac_address, 6);
 
         return new WARP_protocol(buffer, 9);
     }
