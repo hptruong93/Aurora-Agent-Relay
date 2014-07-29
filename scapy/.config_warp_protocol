@@ -31,9 +31,15 @@
             "default": 1
         },
         "flag": {
-            "default": 2
+            "default": 0
         },
         "retry": {
+            "default": 0
+        },
+        "length_msb": {
+            "default": 0
+        },
+        "length_lsb": {
             "default": 0
         }
     },

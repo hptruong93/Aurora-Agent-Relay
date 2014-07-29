@@ -30,12 +30,14 @@ class ToHostapd(Sniffer.Sniffer):#Get message from ethernet and put it into wlan
         super(ToHostapd, self).__init__(str(in_interface), str(out_interface))
 
     def process(self, pkt):
-        to_me = False
+        print "HERE %s" % type(pkt)
         try:
             #Test if this packet comes from the WARP, directed toward the PC ethernet
             to_me = (pkt.dst == config.CONFIG['PC_mac']['ETH']) or (pkt.dst == config.CONFIG['general_mac']['BROADCAST'])
-            #if to_me:
-            #    print str(pkt.src) + " --> " + str(pkt.dst)
+            if to_me:
+               print str(pkt.src) + " --> " + str(pkt.dst)
+               print pkt.type
+            pass
         except Exception as e:
             traceback.print_exc()
             to_me = False
@@ -59,12 +61,14 @@ class ToHostapd(Sniffer.Sniffer):#Get message from ethernet and put it into wlan
             dot11_frame = radio_tap.get_default_radio_tap() / tempWARP.payload
             sendp(dot11_frame, iface=self.out_interface)
             #self.socket.send(dot11_frame)
-            try:
-                pass
-                #if tempWARP.payload.type != 0:
-                #    sendp(dot11_frame, iface = 'wlan1')
-            except:
-                pass
+            # try:
+            #     if tempWARP.payload.type != 0:
+            #         sendp(dot11_frame, iface = 'wlan1')
+            # except:
+            #     pass
+
+    def sniffing(self):
+        sniff(iface=self.in_interface, prn=lambda x: self.process(x), filter = 'ether dst 84:8f:69:cb:69:cd')
 
 #####################################################################################################
 class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
@@ -76,7 +80,7 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         
         self.warp_header = WarpHeader.WARPHeader()
         self.warp_header.type = 'transmit'
-        
+    
         self.count = 0
         self.last = packet_util.current_milli()
         
@@ -86,17 +90,11 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         try:
             inner = Dot11(str(pkt.payload))
 
-            #if inner.subtype == 5 and str(inner.addr1)[-2:] == "8c" and in_interface != 'hwsim0':
-                #current_time = packet_util.current_milli()
-                #self.count += 1
-                #print "Average = %s" % (1000 * float (self.count) / (current_time - self.last))
-
-            #inner.show()
-            #hexdump(inner)
-            #Check if messaged is from hostapd
-            if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
+            # #Check if messaged is from hostapd
+            # if inner.addr2 != config.CONFIG['WARP_mac']['eth_a']:
                 #inner.show()
-                return
+                # return
+            pass
         except:
             return
         
@@ -109,18 +107,25 @@ class ToWARP(Sniffer.Sniffer):#Get message from hwsim0 and output it to ethernet
         else:
             warp_header.payload.retry = config.CONFIG['transmission']['retry_data']
 	
-        #inner.show()
+        send_len = len(inner)
+        warp_header.payload.length_msb = (send_len >> 8) & 0xff
+        warp_header.payload.length_lsb = (send_len) & 0xff
+
+        
         eth_frame = Ether() / warp_header / inner
         eth_frame.src = self.src
         eth_frame.dst = self.dst
-        #sendp(eth_frame, iface = self.out_interface, verbose = 0)
-        self.socket.send(eth_frame)
+        
+        #eth_frame.show()
+
+        sendp(eth_frame, iface = self.out_interface)
+        #self.socket.send(eth_frame)
         
     def sniffing(self):
         if in_interface == 'hwsim0':
-            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = 'type 0 subtype 8')
+            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = '(wlan addr2 40:d8:55:04:22:84) and (type mgt) and (subtype beacon)')
         else:
-            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = 'type 0')
+            sniff(iface=self.in_interface, store = 0, prn=lambda x: self.process(x), filter = '(wlan addr2 40:d8:55:04:22:84) and (type mgt) and not (subtype beacon)')
 
 #####################################################################################################
 class WARPDecodeFromPC(Sniffer.Sniffer):

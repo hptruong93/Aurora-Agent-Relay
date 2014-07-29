@@ -28,7 +28,9 @@ class Transmit(Packet):
                    XByteField("rate", config['transmit']['rate']['default']),
                    XByteField("channel", config['transmit']['channel']['default']),
                    XByteField("flag", config['transmit']['flag']['default']),
-                   XByteField("retry", config['transmit']['retry']['default'])
+                   XByteField("retry", config['transmit']['retry']['default']),
+                   XByteField("length_msb", config['transmit']['length_msb']['default']),
+                   XByteField("length_lsb", config['transmit']['length_lsb']['default'])
                  ]
 
 class MACAddressControl(Packet):
