@@ -48,7 +48,7 @@ namespace Tins {
 
         static uint32_t process_warp_layer(uint8_t* input_buffer);
 
-        static WARP_protocol* create_transmit(WARP_transmit_struct* info);
+        static WARP_protocol* create_transmit(WARP_transmit_struct* info, uint8_t subtype);
 
         static WARP_protocol* create_mac_control(uint8_t operation_code, uint8_t* mac_address);
 

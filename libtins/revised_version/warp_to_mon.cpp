@@ -29,7 +29,7 @@ bool process(PDU &pkt) {
             RadioTap to_send = header /  payload;
 
             sender->send(to_send);
-            cout << "Sent 1 packet." << endl;
+            cout << "Sent 1 packet to monitor interface." << endl;
         } else {
             cout << "Drop 1 packet." << endl;
         }
@@ -59,9 +59,10 @@ int main(int argc, char *argv[]) {
     if (argc == 3) {
         set_in_interface(argv[1]);
         set_out_interface(argv[2]);
+        cout << "Init warp to mon from " << argv[1] << " to " << argv[2] << endl;
     } else {
-        set_in_interface("eth0");
-        set_out_interface("mon.wlan1");
+        set_in_interface("eth1");
+        set_out_interface("wlan0");
     }
 
     sniff(in_interface);

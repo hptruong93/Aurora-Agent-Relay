@@ -57,6 +57,7 @@ bool is_management_frame(int type) {
 
 bool process(PDU &pkt) {
     if (pkt.pdu_type() == pkt.RADIOTAP) {
+    
         //Start processing of RadioTap Packets
         PDU *innerPkt = pkt.inner_pdu();
         if (is_management_frame(innerPkt->pdu_type())) {
@@ -84,38 +85,25 @@ bool process(PDU &pkt) {
                 transmit_info.payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 0);
 
-                // uint8_t* pad_buf;
-                // uint32_t total_size = management_frame.size() + warp_layer->header_size();
-                // if (total_size < 46) {
-                //     uint32_t pad_size = 46 - total_size + warp_layer->header_size();
-                //     pad_buf = (uint8_t*) malloc(pad_size);
-                //     memset(pad_buf, 0, pad_size);
-                //     to_send = to_send / (*warp_layer) / management_frame / RawPDU(pad_buf, pad_size);
-                // } else {
-                    to_send = to_send / (*warp_layer) / management_frame;
-                // }
+                to_send = to_send / (*warp_layer) / management_frame;
                 
 #else
                 to_send = to_send / management_frame;
 #endif
-
                 sender->send(to_send);
 
                 //-----------------> Clean up
 #ifdef WARP_LAYER_ENABLE
                 delete warp_layer;
-                // if (total_size < 46) {
-                //    std::free(pad_buf);
-                // }
 #endif
-                cout << "Sent 1 packet" << endl;
+                cout << "Sent 1 management packet" << endl;
             }
-        } else if (pkt.pdu_type() == pkt.DOT11_DATA) {
+        } else if (innerPkt->pdu_type() == pkt.DOT11_DATA) {
             Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
             Dot11::address_type source = dataPkt.addr2();
-            if(source == HOSTAPD || source == BROADCAST) {
+            if(1 == 1 || source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface to warp
                 EthernetII to_send = EthernetII(WARP, PC_ENGINE);
                 to_send.payload_type(WARP_PROTOCOL_TYPE);
@@ -127,10 +115,10 @@ bool process(PDU &pkt) {
                 transmit_info.rate = DEFAULT_TRANSMIT_RATE;
                 transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
                 transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-                transmit_info.retry = 7;
+                transmit_info.retry = MAX_RETRY;
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info);
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 1);
                 to_send = to_send / (*warp_layer) / dataPkt;
 #else
                 to_send = to_send / dataPkt;
@@ -142,10 +130,44 @@ bool process(PDU &pkt) {
 #ifdef WARP_LAYER_ENABLE
                 delete warp_layer;
 #endif
-                cout << "Sent 1 packet" << endl;
+                cout << "Sent 1 data packet" << endl;
             }
-        } else {//We should not be handling 802.11 Control packets for now
-            cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;
+        } else {//802.11 Control packets
+            cout << "Control packet: Inner Layer is " << PDUTypeToString(pkt.inner_pdu()->pdu_type()) << endl;
+
+            Dot11Control &controlPacket = innerPkt->rfind_pdu<Dot11Control>();
+            Dot11::address_type dest = controlPacket.addr1();
+
+            if (dest != HOSTAPD) {
+                EthernetII to_send = EthernetII(WARP, PC_ENGINE);
+                to_send.payload_type(WARP_PROTOCOL_TYPE);
+
+#ifdef WARP_LAYER_ENABLE
+                //-----------------> Create WARP transmit info
+                WARP_protocol::WARP_transmit_struct transmit_info;
+                transmit_info.power = DEFAULT_TRANSMIT_POWER;
+                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
+                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
+                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
+                transmit_info.retry = MAX_RETRY;
+
+                //-----------------> Create WARP layer and append at the end
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 1);
+                to_send = to_send / (*warp_layer) / controlPacket;
+#else
+                to_send = to_send / controlPacket;
+#endif
+
+                sender->send(to_send);
+
+                //-----------------> Clean up
+#ifdef WARP_LAYER_ENABLE
+                delete warp_layer;
+#endif
+                cout << "Sent 1 control packet" << endl;
+            } else {
+                //cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;
+            }
         }
     } else {
         cerr << "Error: Non RadioTap Packet Detected!" << endl;
@@ -172,9 +194,11 @@ int main(int argc, char *argv[]) {
 	if (argc == 3) {
 		set_in_interface(argv[1]);
         set_out_interface(argv[2]);
+        cout << "Init pc to warp from " << argv[1] << " to " << argv[2] << endl;
 	} else {
         set_in_interface("hwsim0");
         set_out_interface("eth0");
+        cout << "Init pc to warp from hwsim0 to eth0" << endl;
 	}
 
 	sniff(in_interface);
