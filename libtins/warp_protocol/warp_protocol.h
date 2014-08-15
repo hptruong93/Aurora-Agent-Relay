@@ -13,9 +13,15 @@
 #define TYPE_TRANSMIT                                 1
 #define TYPE_CONTROL                                  2
 
+//For type = transmit
+#define SUBTYPE_MANGEMENT_TRANSMIT                    0
+#define SUBTYPE_DATA_TRANSMIT                         1
+
+//For type = control
 #define TRANSMIT_ELEMENT_LENGTH                       7
 #define MAC_CONTROL_ELEMENT_LENGTH                    7
 
+//For type = control
 #define SUBTYPE_TRANSMISSION_CONTROL                  1
 #define SUBTYPE_MAC_ADDRESS_CONTROL                   2
 
@@ -42,6 +48,7 @@ namespace Tins {
             uint8_t flag;
             uint8_t retry;
             uint16_t payload_size;
+            uint8_t bssid[6];
         };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;

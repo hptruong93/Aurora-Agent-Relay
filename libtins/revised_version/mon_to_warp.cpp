@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <string>
 
-#include "config.h"
 #include <tins/tins.h>
+#include "config.h"
+#include "util.h"
 #include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
@@ -61,10 +62,6 @@ bool process(PDU &pkt) {
         //Start processing of RadioTap Packets
         PDU *innerPkt = pkt.inner_pdu();
         if (is_management_frame(innerPkt->pdu_type())) {
-            if (in_interface == "hwsim0" && innerPkt->pdu_type() != pkt.DOT11_BEACON) {
-                return true;
-            }
-
             Dot11ManagementFrame &management_frame = innerPkt->rfind_pdu<Dot11ManagementFrame>();
             Dot11::address_type source = management_frame.addr2();
             Dot11::address_type dest = management_frame.addr1();
@@ -85,7 +82,7 @@ bool process(PDU &pkt) {
                 transmit_info.payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 0);
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_MANGEMENT_TRANSMIT);
 
                 to_send = to_send / (*warp_layer) / management_frame;
                 
@@ -103,7 +100,7 @@ bool process(PDU &pkt) {
         } else if (innerPkt->pdu_type() == pkt.DOT11_DATA) {
             Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
             Dot11::address_type source = dataPkt.addr2();
-            if(1 == 1 || source == HOSTAPD || source == BROADCAST) {
+            if(source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface to warp
                 EthernetII to_send = EthernetII(WARP, PC_ENGINE);
                 to_send.payload_type(WARP_PROTOCOL_TYPE);
@@ -116,9 +113,11 @@ bool process(PDU &pkt) {
                 transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
                 transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
                 transmit_info.retry = MAX_RETRY;
+                transmit_info.payload_size = (uint16_t) dataPkt.size();
+                convert_mac(&(transmit_info.bssid[0]), Config::HOSTAPD);
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 1);
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
                 to_send = to_send / (*warp_layer) / dataPkt;
 #else
                 to_send = to_send / dataPkt;
@@ -150,9 +149,11 @@ bool process(PDU &pkt) {
                 transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
                 transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
                 transmit_info.retry = MAX_RETRY;
+                transmit_info.payload_size = (uint16_t) controlPacket.size();
+                convert_mac(&(transmit_info.bssid[0]), HOSTAPD);
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 1);
+                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
                 to_send = to_send / (*warp_layer) / controlPacket;
 #else
                 to_send = to_send / controlPacket;
@@ -191,10 +192,15 @@ void set_out_interface(const char* output) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc == 3) {
+	if (argc >= 3) {
 		set_in_interface(argv[1]);
         set_out_interface(argv[2]);
         cout << "Init pc to warp from " << argv[1] << " to " << argv[2] << endl;
+
+        if (argc == 4) {
+            Config::HOSTAPD = Tins::HWAddress<6>(argv[3]);
+            cout << "hostapd mac is " << argv[3] << endl;
+        }
 	} else {
         set_in_interface("hwsim0");
         set_out_interface("eth0");

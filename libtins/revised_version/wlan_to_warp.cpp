@@ -16,9 +16,7 @@ PacketSender *sender;
 string in_interface;
 
 bool process(PDU &pkt) {
-    if (pkt.pdu_type() == pkt.ETHERNET_II) {
-        EthernetII &packet = pkt.rfind_pdu<EthernetII>();
-
+    if (pkt.pdu_type() == pkt.ETHERNET_II || pkt.pdu_type() == pkt.IEEE802_3) {
         //For now forward everything
         if (1 == 1) {
             //Add an ethernet frame and send over iface to warp
@@ -33,15 +31,17 @@ bool process(PDU &pkt) {
             transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
             transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
             transmit_info.retry = MAX_RETRY;
-            transmit_info.payload_size = (uint16_t) packet.size();
+            transmit_info.payload_size = (uint16_t) pkt.size();
+            convert_mac(&(transmit_info.bssid[0]), HOSTAPD);
 
             //-----------------> Create WARP layer and append at the end
-            WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, 1);
+            WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
             to_send = to_send / (*warp_layer) / (pkt);
 #else
             to_send = to_send / pkt;
 #endif
 
+            cout << "Size is " << to_send.size() << endl;
             sender->send(to_send);
 
             //-----------------> Clean up
@@ -72,10 +72,15 @@ void set_out_interface(const char* output) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc == 3) {
+	if (argc >= 3) {
 		set_in_interface(argv[1]);
         set_out_interface(argv[2]);
         cout << "Init pc to warp from " << argv[1] << " to " << argv[2] << endl;
+
+        if (argc == 4) {
+            Config::HOSTAPD = Tins::HWAddress<6>(argv[3]);
+            cout << "hostapd mac is " << argv[3] << endl;
+        }        
 	} else {
         set_in_interface("hwsim0");
         set_out_interface("eth0");

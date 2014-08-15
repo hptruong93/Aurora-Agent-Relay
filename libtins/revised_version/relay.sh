@@ -1,75 +1,63 @@
 #!/bin/bash
 
 #This only works as root
-#Usage: bash relay.sh
-#This will kill all hostapd, kill all screen to clean up.
-#Then it will start hostapd with usr config file, and run screens to relay messages out to WARP
-#-c or --clean option to only clean things up (not starting any hostapd or screen)
-#-d or --hostapd to only clean things up and start hostapd (not starting any screen)
-#-nd or --no-hostapd to not start hostapd (but still run the relay program)
+#Usage: bash relay.sh [-c] [-d hostapd_dir] wlan_interface ethernet_interface [bssid]
 
-
-if [ "$1" == "-nc" ] || [ "$1" == "--no-clean" ]; then
-    shift 
-else
+if [ "$1" == "-c" ] || [ "$1" == "--clean" ]; then
     echo Cleaning up...
     killall hostapd
     killall screen
-fi
-
-echo Setting up environment...
-ifconfig hwsim0 up
-ifconfig wlan0 up
-ifconfig eth1 up
-
-if [ "$1" == "-b" ] || [ "$1" == "--bridge" ]; then
-    echo Remove all veth
-    killall vethd
-
-    echo Add veths
-    vethd -v veth0 -e eth0
-    ifconfig veth0 up
-
-    vethd -v vwlan0 -e wlan0
-    ifconfig wlan0 up
-    
-    echo Add bridge
-    ifconfig linux-br down
-    brctl delbr linux-br
-    
-    brctl addbr linux-br
-    brctl addif linux-br veth0
-    brctl addif linux-br vwlan0
-
-    ifconfig linux-br up
     shift
 fi
 
-if [ "$1" == "-c" ] || [ "$1" == "--clean" ]; then
-    shift 
-else
-    if [ "$1" == "-nd" ] || [ "$1" == "--no-hostapd" ]; then
+if [ "$1" == "-d" ] || [ "$1" == "--hostapd" ]; then
+    echo Running hostapd...
+    shift
+    if [[ -n "$1" ]]; then
+        hostapd_dir=${1}
+        screen -S hostapd-at-${hostapd_dir} -d -m hostapd -dd ${hostapd_dir}
         shift
     else
-        echo Running hostapd...
-        screen -S hostapd -d -m hostapd -dd /etc/hostapd/hostapd.conf
-    fi
-
-    if [ "$1" == "-d" ] || [ "$1" == "--hostapd" ]; then
-        shift
-    else
-
-        echo Relay from hwsim0 to eth1
-        screen -S fromhw -d -m ./mon_to_warp.out hwsim0 eth1
-
-        echo Relay from mon.wlan0 to eth1
-        screen -S frommon -d -m ./mon_to_warp.out mon.wlan0 eth1
-
-        echo Relay from eth1 to wlan interface 
-        screen -S topc -d -m ./warp_to_wlan.out eth1 mon.wlan0
-
-	echo Relay from wlan0 to eth1
-        screen -S fromwlan -d -m ./wlan_to_warp.out wlan0 eth1
-
+        echo "Missing hostapd directory... Exiting..."
+        exit 1
     fi
 fi
+
+if [[ -n "$1" ]]; then
+    wlan_iface=${1}
+    shift
+else
+    echo "Missing wlan interface... Exiting..."
+    exit 1
+fi
+
+if [[ -n "$1" ]]; then
+    eth_iface=${1}
+    shift
+else
+    echo "Missing ethernet interface... Exiting..."
+    exit 1
+fi
+
+bssid="40:d8:55:04:22:84"
+if [[ -n "$1" ]]; then
+    bssid=${1}
+    shift
+else
+    echo "Missing bssid... Using default bssid 40:d8:55:04:22:84"
+    bssid="40:d8:55:04:22:84"
+fi
+
+echo Setting up environment with ${wlan_iface} to ${eth_iface}, bssid is ${bssid}
+ifconfig hwsim0 up
+ifconfig ${wlan_iface} up
+ifconfig ${eth_iface} up
+
+echo Relay from hwsim0 to ${eth_iface}
+screen -S frommon${wlan_iface} -d -m ./mon_to_warp.out hwsim0 ${eth_iface} ${bssid}
+
+echo Relay from ${eth_iface} to wlan interface 
+screen -S to${wlan_iface} -d -m ./warp_to_wlan.out ${eth_iface} mon.${wlan_iface} ${wlan_iface} ${bssid}
+
+echo Relay from ${wlan_iface} to ${eth_iface}
+screen -S from${wlan_iface} -d -m ./wlan_to_warp.out ${wlan_iface} ${eth_iface} ${bssid}

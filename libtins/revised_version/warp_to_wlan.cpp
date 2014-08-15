@@ -14,6 +14,9 @@ using namespace Config;
 PacketSender *sender;
 string in_interface;
 
+string mon_interface;
+string wlan_interface;
+
 string PDUTypeToString(int PDUTypeFlag) {
     string definitions[] = {
         "RAW", "ETHERNET_II", "IEEE802_3", "RADIOTAP",
@@ -53,9 +56,9 @@ bool process(PDU &pkt) {
                 RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                 RadioTap to_send = header /  RawPDU(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
 
-                sender->default_interface("mon.wlan0");
+                sender->default_interface(mon_interface);
                 sender->send(to_send);
-                cout << "Sent 1 packet to mon.wlan0" << endl;
+                cout << "Sent 1 packet to " << mon_interface << endl;
             } else if (dot11.type() == Dot11::DATA) {
                 Dot11Data data_frame(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
                 cout << "Inner layer of data frame is " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
@@ -64,11 +67,10 @@ bool process(PDU &pkt) {
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
 
-                    sender->default_interface("mon.wlan0");
+                    sender->default_interface(mon_interface);
                     sender->send(to_send);
-                    cout << "Sent 1 packet to mon.wlan0" << endl;
+                    cout << "Sent 1 packet to " << mon_interface << endl;
                 } else {
-
                     try {
                         SNAP snap = data_frame.rfind_pdu<SNAP>();
 
@@ -77,9 +79,10 @@ bool process(PDU &pkt) {
                         to_send = to_send / (*(snap.inner_pdu()));
                         to_send.payload_type(snap.eth_type());
 
-                        sender->default_interface("wlan0");
+                        sender->default_interface(wlan_interface);
+
                         sender->send(to_send);
-                        cout << "Sent 1 packet to wlan0" << endl;
+                        cout << "Sent 1 packet to " << wlan_interface << endl;
                     } catch (exception& e) {
                         cout << "Snap not found. Not raw either. payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                     }
@@ -115,13 +118,26 @@ void set_out_interface(const char* output) {
 int main(int argc, char *argv[]) {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
 
-    if (argc == 3) {
+    if (argc >= 3) {
         set_in_interface(argv[1]);
         set_out_interface(argv[2]);
         cout << "Init warp to wlan from " << argv[1] << " to " << argv[2] << endl;
+
+        if (argc >= 4) {
+            mon_interface = argv[2];
+            wlan_interface = argv[3];
+            cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
+        }
+
+        if (argc == 5) {
+            Config::HOSTAPD = Tins::HWAddress<6>(argv[4]);
+            cout << "hostapd mac is " << argv[4] << endl;
+        }
     } else {
         set_in_interface("eth0");
         set_out_interface("mon.wlan1");
+
+        mon_interface = "mon.wlan1";
     }
 
     sniff(in_interface);

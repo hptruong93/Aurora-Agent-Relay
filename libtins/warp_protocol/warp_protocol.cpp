@@ -20,10 +20,15 @@ namespace Tins {
     }
 
     WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info, uint8_t subtype) {
-        bool management = subtype == 0;
-
         uint8_t* buffer;
-        buffer = (uint8_t*) std::malloc(9);
+        uint8_t buffer_length;
+
+        if (subtype == SUBTYPE_MANGEMENT_TRANSMIT) {
+            buffer_length = 9;
+        } else if (subtype == SUBTYPE_DATA_TRANSMIT) {
+            buffer_length = 9 + 6;
+        }
+        buffer = (uint8_t*) std::malloc(buffer_length);
 
         //Header
         buffer[TYPE_INDEX] = 0x01;
@@ -39,7 +44,11 @@ namespace Tins {
         buffer[7] = (info->payload_size >> 8) & 0xff;
         buffer[8] = info->payload_size & 0xff;
 
-        WARP_protocol* output = new WARP_protocol(buffer, 9);
+        if (subtype == SUBTYPE_DATA_TRANSMIT) {
+            memcpy(&(buffer[9]), &(info->bssid[0]), 6);
+        }
+
+        WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);
         return output;
     }

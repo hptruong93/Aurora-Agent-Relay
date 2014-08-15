@@ -56,10 +56,15 @@ void set_out_interface(const char* output) {
 int main(int argc, char *argv[]) {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
 
-    if (argc == 3) {
+    if (argc >= 3) {
         set_in_interface(argv[1]);
         set_out_interface(argv[2]);
         cout << "Init warp to mon from " << argv[1] << " to " << argv[2] << endl;
+
+        if (argc == 4) {
+            Config::HOSTAPD = Tins::HWAddress<6>(argv[3]);
+            cout << "hostapd mac is " << argv[3] << endl;
+        }
     } else {
         set_in_interface("eth1");
         set_out_interface("wlan0");
