@@ -1,5 +1,5 @@
 #ifndef CC (Line Below Added by Kevin Han (change to your openwrt build directory) 
-CC = /home/kevinhan/Desktop/openwrt12x86/staging_dir/toolchain-i386_gcc-4.6-linaro_uClibc-0.9.33.2/bin/i486-openwrt-linux-uclibc-gcc
+CC = /home/kevinhan/openwrt/staging_dir/toolchain-i386_gcc-4.6-linaro_uClibc-0.9.33.2/bin/i486-openwrt-linux-uclibc-gcc
 #endif
 
 ifndef CFLAGS
@@ -9,14 +9,14 @@ endif
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 #4 Lines Below Added by Kevin Han (change to your openwrt build directory)
-CFLAGS += -I/home/kevinhan/Desktop/openwrt12x86/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/include
-CFLAGS += -I/home/kevinhan/Desktop/openwrt12x86/build_dir/target-i386_uClibc-0.9.33.2/openssl-1.0.1h/include
-LDFLAGS += -L/home/kevinhan/Desktop/openwrt12x86/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/ipkg-install/usr/lib
-LDFLAGS += -L/home/kevinhan/Desktop/openwrt12x86/build_dir/target-i386_uClibc-0.9.33.2/openssl-1.0.1h/ipkg-install/usr/lib
+CFLAGS += -I/home/kevinhan/openwrt/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/include
+CFLAGS += -I/home/kevinhan/openwrt/build_dir/target-i386_uClibc-0.9.33.2/openssl-1.0.1h/include
+LDFLAGS += -L/home/kevinhan/openwrt/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/ipkg-install/usr/lib
+LDFLAGS += -L/home/kevinhan/openwrt/build_dir/target-i386_uClibc-0.9.33.2/openssl-1.0.1h/ipkg-install/usr/lib
 
 # Uncomment following line and set the path to your kernel tree include
 # directory if your C library does not include all header files.
-#CFLAGS += -DUSE_KERNEL_HEADERS -I/home/kevinhan/Desktop/openwrt12x86/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/include
+CFLAGS += -DUSE_KERNEL_HEADERS -I/home/kevinhan/openwrt/build_dir/target-i386_uClibc-0.9.33.2/libnl-2.0/include
 
 -include .config
 
