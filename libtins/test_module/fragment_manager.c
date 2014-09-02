@@ -11,7 +11,7 @@ typedef unsigned long u32;
 // the number of spaces in the below arrays for info and data
 #define PACKET_SPACES                    10
 
-u8** checked_out_queue_addr;
+dl_list** checked_out_queue_addr;
 fragment_info** info_addr;
 
 u8* get_data_buffer_from_queue(dl_list* input) {
@@ -37,20 +37,33 @@ int main(void) {
     manage_result fragResults;
     
     //{packet #, fragment #, # of fragments, packet length, fragment offset, , data}
-	u8 dataA1[] = {0, 1, 2, 3, 0, 0, 0, 0, 0, 0};
-	u8 dataA2[] = {4, 5, 0, 0, 0, 0, 0, 0, 0, 0};
-	u8 dataA3[] = {6, 7, 8, 0, 0, 0, 0, 0, 0, 0};
-	u8 dataA4[] = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	u8 data_buff_A1[] = {0, 1, 2, 3, 0, 0, 0, 0, 0, 0};
+	u8 data_buff_A2[] = {4, 5, 0, 0, 0, 0, 0, 0, 0, 0};
+	u8 data_buff_A3[] = {6, 7, 8, 0, 0, 0, 0, 0, 0, 0};
+	u8 data_buff_A4[] = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    dl_list dataA1, dataA2, dataA3, dataA4, dataB1, dataB2, dataB3, dataC1, dataC2, dataC3, dataC4, dataC5;
+    dataA1.data_addr = data_buff_A1;
+    dataA2.data_addr = data_buff_A2;
+    dataA3.data_addr = data_buff_A3;
+    dataA4.data_addr = data_buff_A4;
 
-	u8 dataB1[] = {10, 11, 0, 0, 0};
-	u8 dataB2[] = {12, 0, 0, 0, 0};
-	u8 dataB3[] = {13, 14, 0, 0, 0};    
+	u8 data_buff_B1[] = {10, 11, 0, 0, 0};
+	u8 data_buff_B2[] = {12, 0, 0, 0, 0};
+	u8 data_buff_B3[] = {13, 14, 0, 0, 0};    
+    dataB1.data_addr = data_buff_B1;
+    dataB2.data_addr = data_buff_B2;
+    dataB3.data_addr = data_buff_B3;
     
-    u8 dataC1[] = {15, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    u8 dataC2[] = {19, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    u8 dataC3[] = {24, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    u8 dataC4[] = {26, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    u8 dataC5[] = {28, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 data_buff_C1[] = {15, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 data_buff_C2[] = {19, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 data_buff_C3[] = {24, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 data_buff_C4[] = {26, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 data_buff_C5[] = {28, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    dataC1.data_addr = data_buff_C1;
+    dataC2.data_addr = data_buff_C2;
+    dataC3.data_addr = data_buff_C3;
+    dataC4.data_addr = data_buff_C4;
+    dataC5.data_addr = data_buff_C5;
 
 	u8 dataA_assembled[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}; //For reference only. Not used
 	u8 dataB_assembled[] = {10, 11, 12, 13, 14}; //For reference only. Not used
@@ -60,7 +73,7 @@ int main(void) {
     // new fragment with any fragments whose buffer locations are stored in the array,
     // add the location of fragments from new packets to the array and remove completed
     // fragments
-    checked_out_queue_addr = (u8**) calloc(PACKET_SPACES, sizeof(u8*));
+    checked_out_queue_addr = (dl_list**) calloc(PACKET_SPACES, sizeof(dl_list*));
     info_addr = (fragment_info**) calloc(PACKET_SPACES, sizeof(fragment_info*));
     
 	fragment_info infoA1 = create_info(222, 1, 0, 10);
@@ -79,42 +92,41 @@ int main(void) {
     fragment_info infoC5 = create_info(225, 5, 13, 15);
     
     
-	// fragResults = fragment_arrive(&infoB2, dataB2, 1);
-    // fragResults = fragment_arrive(&infoC1, dataC1, 4);
-    fragResults = fragment_arrive(&infoA4, dataA4, 1);
-    // fragResults = fragment_arrive(&infoB3, dataB3, 2);
-    // fragResults = fragment_arrive(&infoC4, dataC4, 2);
-    fragResults = fragment_arrive(&infoA3, dataA3, 3);
-    // fragResults = fragment_arrive(&infoC2, dataC2, 5);
-    fragResults = fragment_arrive(&infoA1, dataA1, 4);
-    // fragResults = fragment_arrive(&infoC5, dataC5, 2);
-    fragResults = fragment_arrive(&infoA2, dataA2, 2);
+	fragResults = fragment_arrive(&infoB2, &dataB2, 1);
+    fragResults = fragment_arrive(&infoC1, &dataC1, 4);
+    fragResults = fragment_arrive(&infoA4, &dataA4, 1);
+    fragResults = fragment_arrive(&infoB3, &dataB3, 2);
+    fragResults = fragment_arrive(&infoC4, &dataC4, 2);
+    fragResults = fragment_arrive(&infoA3, &dataA3, 3);
+    fragResults = fragment_arrive(&infoA1, &dataA1, 4);
+    fragResults = fragment_arrive(&infoC2, &dataC2, 5);
+    fragResults = fragment_arrive(&infoC5, &dataC5, 2);
+    fragResults = fragment_arrive(&infoA2, &dataA2, 2);
+    
     
     int i = 0;
     
     for (i = 0; i < fragResults.info_address->size; i++){
-        printf("%d, ", fragResults.packet_address[i]);
+        printf("%d, ", get_data_buffer_from_queue(fragResults.packet_address)[i]);
     }
     printf("\n");
     
-    // fragResults = fragment_arrive(&infoB1, dataB1, 2); 
+    fragResults = fragment_arrive(&infoB1, &dataB1, 2); 
     
-    // for (i = 0; i < fragResults.info_address->size; i++){
-    //     printf("%d, ", fragResults.packet_address[i]);
-    // }
+    for (i = 0; i < fragResults.info_address->size; i++){
+        printf("%d, ", get_data_buffer_from_queue(fragResults.packet_address)[i]);
+    }
+    printf("\n");
     
-    // printf("\n");
+    fragResults = fragment_arrive(&infoC3, &dataC3, 2);
     
-    // fragResults = fragment_arrive(&infoC3, dataC3, 2);
-    
-    // for (i = 0; i < fragResults.info_address->size; i++){
-    //     printf("%d, ", fragResults.packet_address[i]);
-    // }
-    
-    // printf("\n");
+    for (i = 0; i < fragResults.info_address->size; i++){
+        printf("%d, ", get_data_buffer_from_queue(fragResults.packet_address)[i]);
+    }
+    printf("\n");
 }
 
-manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
+manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u16 data_length) {
     // assemble and store data contained in buffers being read into this function.
     // When a fragment is received and its packet still requires more fragments
     // to be complete return WAITING_FOR_FRAGMENT. Because the function receives a pointer to the
@@ -123,9 +135,12 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
     // return READY_TO_SEND so that the main program knows that
     // the first element of the addresses array contains the address to the reassembled
     // packet
-    
+    u8* data = get_data_buffer_from_queue(checked_out_queue);
+
     manage_result frag_result;
     
+    // printf("number is %d\n", info->fragment_number);
+
     if (checked_out_queue_addr[0] == 0) {
         // there have been no addresses added yet, so we input the location
         // of the first data element of the incoming fragment
@@ -137,7 +152,7 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
         
         info_addr[0] = info;
         
-        checked_out_queue_addr[0] = data;
+        checked_out_queue_addr[0] = checked_out_queue;
         
         frag_result.status = WAITING_FOR_FRAGMENT;
                             
@@ -145,7 +160,7 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
         frag_result.info_address = 0;     
 
         
-        //printf("1\n");
+        // printf("1\n");
     } else {
         // addresses array has been initiated
         
@@ -154,8 +169,7 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
         for (i = 0; i < PACKET_SPACES; i++){
             // run through the array of packets, seeing if the packet number
             // of a stored fragment matches the one in the incoming fragment
-            
-            //printf("loop: %d\n", i);
+            // printf("loop: %d\n", i);
             
             if (checked_out_queue_addr[i] == 0){
                 // we've checked all the stored packet info and the new
@@ -166,14 +180,14 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
         
                 info_addr[i] = info;
         
-                checked_out_queue_addr[i] = data;
+                checked_out_queue_addr[i] = checked_out_queue;
                 
                 frag_result.status = WAITING_FOR_FRAGMENT;
                             
                 frag_result.packet_address = 0;
                 frag_result.info_address = 0;     
                 
-                //printf("2\n");
+                // printf("2\n");
                 
                 break;
                 
@@ -182,23 +196,23 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
                 // (the number of the packet it belongs to) with the first
                 // element of the incoming data.
                 
-                u8 * test_data = (u8*)checked_out_queue_addr[i];
-                fragment_info * test_info = (fragment_info*)info_addr[i];
+                dl_list* test_data = checked_out_queue_addr[i];
+                fragment_info* test_info = (fragment_info*)info_addr[i];
                 
-                //printf("fragment id: %d\n", info->fragment_id);
-                //printf("fragment id test info: %d\n", test_info->fragment_id);
+                // printf("fragment id and number: %d %d\n", info->fragment_id, info->fragment_number);
+                // printf("fragment id test info and number: %d %d\n", test_info->fragment_id, test_info->fragment_number);
                 
                 if (info->fragment_id == test_info->fragment_id) {
-                    
-                    //printf("3: %d\n", i);
-                    
+                    u8* test_data_buffer = get_data_buffer_from_queue(test_data);
+                    // printf("3: %d\n", i);
+
                     // we've found a match, therefore we look at the respective
                     // fragment numbers to see which is the lower packet number
                     // and add the data elements from the higher fragment
                     // number to the lower fragment number
                     
                     if (info->fragment_number < test_info->fragment_number) {
-                    //printf("4\n");
+                    // printf("4 Copying to new buffer\n");
                     
                     // incoming fragment is the lower fragment number
                     
@@ -220,9 +234,9 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
                         // and the offset of the stored fragment is 8,
                         // thus we take the first (15-8 = 7) elements of 
                         // the stored fragment and move them to the new fragment
-                        memmove(data + rel_offset, test_data, info->size - test_info->offset);
-                                                
-                        if (test_info->size - data_length == 0){
+                        memmove(data + rel_offset, test_data_buffer, info->size - test_info->offset);
+
+                        if (test_info->size - data_length == 0) {
                         // this new fragment contains the last pieces of the
                         // packet that we need. Provide the outside program 
                         // with the data and info addresses of the newly-modified
@@ -231,7 +245,7 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
                          
                             frag_result.status = READY_TO_SEND;
                             
-                            frag_result.packet_address = (u8*)data;
+                            frag_result.packet_address = checked_out_queue;
                             checked_out_queue_addr[i] = 0;
                             
                             int k = i;
@@ -261,7 +275,7 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
                             
                             info->size = test_info->size - data_length;                            
                             
-                            checked_out_queue_addr[i] = data;
+                            checked_out_queue_addr[i] = checked_out_queue;
                             info_addr[i] = info;
                             
                             frag_result.status = WAITING_FOR_FRAGMENT;
@@ -271,21 +285,16 @@ manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length) {
                             
                         }
                         
-                        
-                        
                     } else {
-                        //printf("5\n");
+                        // printf("5 Copying to old buffer\n");
                         int rel_offset = info->offset - test_info->offset;
-                        // int j = 0;
-                        // for (j = 0; j < (data_length); j++){
-                        //     test_data[j + rel_offset] = data[j];
-                        // }
-                        memmove(test_data + rel_offset, data, data_length);
-                        
+                        memmove(test_data_buffer + rel_offset, data, data_length);
+
+
                         if (test_info->size - data_length == 0){                   
                             test_info->size = info->size;
                             frag_result.status = READY_TO_SEND;
-                            frag_result.packet_address = (u8*)test_data;
+                            frag_result.packet_address = test_data;
                             checked_out_queue_addr[i] = 0;
                             
                             int k = i;

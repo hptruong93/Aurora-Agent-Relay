@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct {
     u8 status;
-    u8* packet_address;
+    dl_list* packet_address;
     fragment_info* info_address;
 } manage_result;
 
@@ -50,7 +50,7 @@ Creating buffer for management purpose (using malloc/ direct declaration) is
 If returned status is READ_TO_SEND, then all data must have been assembled in u8* frame_data in the manage_result struct
 Can safely assume that the pointer passed in will be able to hold all data
 */
-manage_result fragment_arrive(fragment_info* info, u8* data, u16 data_length);
+manage_result fragment_arrive(fragment_info* info, dl_list* data, u16 data_length);
 
 
 
