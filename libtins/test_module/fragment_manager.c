@@ -163,10 +163,9 @@ manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u
         // printf("1\n");
     } else {
         // addresses array has been initiated
+        u8 i = 0;
         
-        int i = 0;
-        
-        for (i = 0; i < PACKET_SPACES; i++){
+        for (i = 0; i < PACKET_SPACES; i++) {
             // run through the array of packets, seeing if the packet number
             // of a stored fragment matches the one in the incoming fragment
             // printf("loop: %d\n", i);
@@ -216,12 +215,12 @@ manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u
                     
                     // incoming fragment is the lower fragment number
                     
-                        int rel_offset = test_info->offset - info->offset;
+                        u16 rel_offset = test_info->offset - info->offset;
                         // find relative offset of stored fragment from new
                         // fragment in order to know where to place data in
                         // new fragment
     
-                        int j = 0;
+                        u8 j = 0;
                         
                         // we want to move all the data from the stored
                         // fragment from its beginning to the last element
@@ -248,7 +247,7 @@ manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u
                             frag_result.packet_address = checked_out_queue;
                             checked_out_queue_addr[i] = 0;
                             
-                            int k = i;
+                            u8 k = i;
                             
                             while (k < (PACKET_SPACES - 1) && checked_out_queue_addr[k + 1] != 0){
                                 checked_out_queue_addr[k] = checked_out_queue_addr[k+1];
@@ -287,7 +286,7 @@ manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u
                         
                     } else {
                         // printf("5 Copying to old buffer\n");
-                        int rel_offset = info->offset - test_info->offset;
+                        u16 rel_offset = info->offset - test_info->offset;
                         memmove(test_data_buffer + rel_offset, data, data_length);
 
 
@@ -297,7 +296,7 @@ manage_result fragment_arrive(fragment_info* info, dl_list* checked_out_queue, u
                             frag_result.packet_address = test_data;
                             checked_out_queue_addr[i] = 0;
                             
-                            int k = i;
+                            u8 k = i;
                             while (k < (PACKET_SPACES - 1) && checked_out_queue_addr[k + 1] != 0){
                                 checked_out_queue_addr[k] = checked_out_queue_addr[k+1];
                                 checked_out_queue_addr[k + 1] = 0;
