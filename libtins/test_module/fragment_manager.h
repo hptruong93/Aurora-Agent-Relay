@@ -52,15 +52,7 @@ Can safely assume that the pointer passed in will be able to hold all data
 */
 manage_result fragment_arrive(fragment_info* info, dl_list* data, u16 data_length);
 
-
-
-// u32* shift_addresses(u32* addresses, u8 element);
-
 void clear_memory();
 
-/*
-Test program below --> test in a separate file
-*/
 fragment_info create_info(u8 id, u8 number, u16 offset, u16 size);
-
 #endif
