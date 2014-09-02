@@ -1,5 +1,6 @@
 #!/bin/bash
 #Usage: bash bridge.sh [-c] iface1 viface1 iface2 viface2 bridge_name
+#This will bridge two interfaces and created a simple aurora slice for testing purpose
 
 if [ "$1" == "-c" ] || [ "$1" == "--clean" ]; then
 	echo Clean up interfaces...

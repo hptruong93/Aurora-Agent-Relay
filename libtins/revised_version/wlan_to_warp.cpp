@@ -40,7 +40,6 @@ bool process(PDU &pkt) {
 #else
             to_send = to_send / pkt;
 #endif
-
             cout << "Size is " << to_send.size() << endl;
             sender->send(to_send);
 
