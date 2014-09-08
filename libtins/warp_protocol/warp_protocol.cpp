@@ -16,7 +16,15 @@ namespace Tins {
     
     uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer) {
         if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
-            return 9;
+            if (input_buffer[SUBTYPE_INDEX] == SUBTYPE_DATA_TRANSMIT) {
+                uint8_t* bssid = &(input_buffer[BSSID_INDEX]);
+                uint8_t flag = input_buffer[FLAG_INDEX];
+                uint8_t retry = input_buffer[RETRY_INDEX];
+                uint16_t data_length = (input_buffer[DATA_LENGTH_MSB] << 8) & (input_buffer[DATA_LENGTH_LSB]);
+                return FRAGMENT_INFO_INDEX;
+            } else {
+                return 0;
+            }
         } else {
             return 0;
         }
@@ -68,10 +76,10 @@ namespace Tins {
 
         //Transmit
         memcpy(&(buffer[2]), &(info->bssid[0]), 6);
-        buffer[8] = info->flag;
-        buffer[9] = info->retry;
-        buffer[10] = (info->payload_size >> 8) & 0xff;
-        buffer[11] = info->payload_size & 0xff;
+        buffer[FLAG_INDEX] = info->flag;
+        buffer[RETRY_INDEX] = info->retry;
+        buffer[DATA_LENGTH_MSB] = (info->payload_size >> 8) & 0xff;
+        buffer[DATA_LENGTH_LSB] = info->payload_size & 0xff;
 
         if (subtype == SUBTYPE_DATA_TRANSMIT) {
             if (fragment_info == NULL) {

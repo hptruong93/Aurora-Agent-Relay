@@ -20,8 +20,8 @@ mon_to_warp : util.o config.o warp_protocol.o fragment_sender.o mon_to_warp.o
 wlan_to_warp : util.o config.o warp_protocol.o fragment_sender.o wlan_to_warp.o
 	$(CC) util.o config.o warp_protocol.o fragment_sender.o wlan_to_warp.o $(LFLAGS) -o wlan_to_warp.out
 
-warp_to_wlan : util.o config.o warp_protocol.o fragment_sender.o warp_to_wlan.o
-	$(CC) util.o config.o warp_protocol.o fragment_sender.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
+warp_to_wlan : util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o
+	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
 
 ###################################Compiling main files####################################################
 
@@ -36,7 +36,10 @@ warp_to_wlan.o : warp_to_wlan.cpp
 
 ##################################Files to link later######################################################
 
-fragment_sender.o : config.o $(SEND_RECEIVE_MODULE_DIR)fragment_sender.cpp
+fragment_receiver.o : $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp
+	$(CC) $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp $(CFLAGS) $(INC_SEND_MODULE) -o fragment_receiver.o
+
+fragment_sender.o : $(SEND_RECEIVE_MODULE_DIR)fragment_sender.cpp
 	$(CC) $(SEND_RECEIVE_MODULE_DIR)fragment_sender.cpp $(CFLAGS) $(INC_SEND_MODULE) -o fragment_sender.o
 
 warp_protocol.o : $(WARP_PROTOCOL_DIR)warp_protocol.cpp

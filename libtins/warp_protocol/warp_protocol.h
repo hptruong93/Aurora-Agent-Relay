@@ -20,6 +20,13 @@
 #define SUBTYPE_MANGEMENT_TRANSMIT                    0
 #define SUBTYPE_DATA_TRANSMIT                         1
 
+#define BSSID_INDEX                                   2 //6 bytes following will be bssid
+#define FLAG_INDEX                                    8
+#define RETRY_INDEX                                   9
+#define DATA_LENGTH_MSB                               10
+#define DATA_LENGTH_LSB                               11
+#define FRAGMENT_INFO_INDEX                           12
+
 //For fragment info
 #define FRAGMENT_INFO_LENGTH                          5
 #define FRAGMENT_ID_INDEX                             0
