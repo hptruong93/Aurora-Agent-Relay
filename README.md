@@ -1,4 +1,4 @@
-SAVI-WARP
+Aurora Agent Relay
 =========
 
-SAVI Repository for WARP board related code
+Relay packets between Aurora Agent and WARP
