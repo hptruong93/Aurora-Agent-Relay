@@ -6,8 +6,11 @@
 #include "tins/exceptions.h"
 #include "tins/rawpdu.h"
 #include "tins/tins.h"
+#include "../revised_version/util.h"
 
 using namespace std;
+
+#define RESERVED_FRAGMENT_ID                     255
 
 namespace Tins {
     
@@ -19,14 +22,43 @@ namespace Tins {
         }
     }
 
-    WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info, uint8_t subtype) {
+    WARP_protocol::WARP_transmit_struct* WARP_protocol::get_default_transmit_struct(Tins::HWAddress<6> bssid) {
+        WARP_transmit_struct* output = (WARP_transmit_struct*) calloc(sizeof(WARP_transmit_struct), 0);
+        
+        output->flag = DEFAULT_TRANSMIT_FLAG;
+        output->retry = MAX_RETRY;
+        output->payload_size = 0;
+        convert_mac(&(output->bssid[0]), bssid);
+
+        return output;
+    }
+
+    WARP_protocol::WARP_fragment_struct* WARP_protocol::generate_fragment_struct() {
+        static uint8_t id_counter = 0;
+
+        WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(sizeof(WARP_fragment_struct), 0);
+
+        output->id = id_counter;
+        id_counter++;
+        if (id_counter == RESERVED_FRAGMENT_ID) {
+            id_counter = 0;
+        }
+
+        output->fragment_number = 1;
+        output->total_number_fragment = 1;
+        output->byte_offset = 0;
+
+        return output;
+    }
+
+    WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype) {
         uint8_t* buffer;
         uint8_t buffer_length;
 
         if (subtype == SUBTYPE_MANGEMENT_TRANSMIT) {
-            buffer_length = 9;
+            buffer_length = 2 + 10;
         } else if (subtype == SUBTYPE_DATA_TRANSMIT) {
-            buffer_length = 9 + 6;
+            buffer_length = 2 + 10 + 5;
         }
         buffer = (uint8_t*) std::malloc(buffer_length);
 
@@ -34,19 +66,25 @@ namespace Tins {
         buffer[TYPE_INDEX] = 0x01;
         buffer[SUBTYPE_INDEX] = subtype;
 
-
         //Transmit
-        buffer[2] = info->power;
-        buffer[3] = info->rate;
-        buffer[4] = info->channel;
-        buffer[5] = info->flag;
-        buffer[6] = info->retry;
-        buffer[7] = (info->payload_size >> 8) & 0xff;
-        buffer[8] = info->payload_size & 0xff;
+        memcpy(&(buffer[2]), &(info->bssid[0]), 6);
+        buffer[8] = info->flag;
+        buffer[9] = info->retry;
+        buffer[10] = (info->payload_size >> 8) & 0xff;
+        buffer[11] = info->payload_size & 0xff;
 
         if (subtype == SUBTYPE_DATA_TRANSMIT) {
-            memcpy(&(buffer[9]), &(info->bssid[0]), 6);
+            if (fragment_info == NULL) {
+                cout << "NULL fragment info detected..." << endl;
+            }
+
+            buffer[12] = fragment_info->id;
+            buffer[13] = fragment_info->fragment_number;
+            buffer[14] = fragment_info->total_number_fragment;
+            buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
+            buffer[16] = (fragment_info->byte_offset) & 0xff;
         }
+        
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);

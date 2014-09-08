@@ -4,15 +4,15 @@
 #include <tins/tins.h>
 #include "config.h"
 #include "util.h"
+#include "../send_receive_module/fragment_sender.h"
 #include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
 using namespace Config;
 using namespace std;
 
-#define WARP_LAYER_ENABLE
-
-PacketSender *sender;
+PacketSender* sender;
+FragmentSender* fragment_sender;
 string in_interface;
 
 string PDUTypeToString(int PDUTypeFlag) {
@@ -38,22 +38,22 @@ string PDUTypeToString(int PDUTypeFlag) {
 }
 
 bool is_management_frame(int type) {
-	string converted = PDUTypeToString(type);
-	if (converted == "DOT11" ||
+    string converted = PDUTypeToString(type);
+    if (converted == "DOT11" ||
         converted == "DOT11_BEACON" ||
-		converted == "DOT11_PROBE_REQ" ||
-		converted == "DOT11_PROBE_RESP" ||
-		converted == "DOT11_AUTH" ||
-		converted == "DOT11_DEAUTH" ||
-		converted == "DOT11_ASSOC_REQ" ||
-		converted == "DOT11_ASSOC_RESP" ||
-		converted == "DOT11_REASSOC_REQ" ||
-		converted == "DOT11_REASSOC_RESP" ||
-		converted == "DOT11_DIASSOC") {
-		return true;
-	} else {
-		return false;
-	}
+        converted == "DOT11_PROBE_REQ" ||
+        converted == "DOT11_PROBE_RESP" ||
+        converted == "DOT11_AUTH" ||
+        converted == "DOT11_DEAUTH" ||
+        converted == "DOT11_ASSOC_REQ" ||
+        converted == "DOT11_ASSOC_RESP" ||
+        converted == "DOT11_REASSOC_REQ" ||
+        converted == "DOT11_REASSOC_RESP" ||
+        converted == "DOT11_DIASSOC") {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 bool process(PDU &pkt) {
@@ -68,33 +68,16 @@ bool process(PDU &pkt) {
 
             if (source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface
-                EthernetII to_send = EthernetII(WARP, PC_ENGINE);
-                to_send.payload_type(WARP_PROTOCOL_TYPE);
-
-#ifdef WARP_LAYER_ENABLE
                 //-----------------> Create WARP transmit info
-                WARP_protocol::WARP_transmit_struct transmit_info;
-                transmit_info.power = DEFAULT_TRANSMIT_POWER;
-                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
-                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
-                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-                transmit_info.retry = (dest == BROADCAST) ? 0 : MAX_RETRY;
-                transmit_info.payload_size = (uint16_t) management_frame.size();
+                WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();
+                transmit_info->retry = (dest == BROADCAST) ? 0 : MAX_RETRY;
+                transmit_info->payload_size = (uint16_t) management_frame.size();
 
-                //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_MANGEMENT_TRANSMIT);
-
-                to_send = to_send / (*warp_layer) / management_frame;
-                
-#else
-                to_send = to_send / management_frame;
-#endif
-                sender->send(to_send);
+                //-----------------> Using fragment sender to send
+                fragment_sender->send(management_frame, transmit_info, SUBTYPE_MANGEMENT_TRANSMIT);
 
                 //-----------------> Clean up
-#ifdef WARP_LAYER_ENABLE
-                delete warp_layer;
-#endif
+                free(transmit_info);
                 cout << "Sent 1 management packet" << endl;
             }
         } else if (innerPkt->pdu_type() == pkt.DOT11_DATA) {
@@ -102,33 +85,16 @@ bool process(PDU &pkt) {
             Dot11::address_type source = dataPkt.addr2();
             if(source == HOSTAPD || source == BROADCAST) {
                 //Add an ethernet frame and send over iface to warp
-                EthernetII to_send = EthernetII(WARP, PC_ENGINE);
-                to_send.payload_type(WARP_PROTOCOL_TYPE);
-
-#ifdef WARP_LAYER_ENABLE
                 //-----------------> Create WARP transmit info
-                WARP_protocol::WARP_transmit_struct transmit_info;
-                transmit_info.power = DEFAULT_TRANSMIT_POWER;
-                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
-                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
-                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-                transmit_info.retry = MAX_RETRY;
-                transmit_info.payload_size = (uint16_t) dataPkt.size();
-                convert_mac(&(transmit_info.bssid[0]), Config::HOSTAPD);
+                WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();
+                transmit_info->retry = MAX_RETRY;
+                transmit_info->payload_size = (uint16_t) dataPkt.size();
 
-                //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
-                to_send = to_send / (*warp_layer) / dataPkt;
-#else
-                to_send = to_send / dataPkt;
-#endif
-
-                sender->send(to_send);
+                //-----------------> Using fragment sender to send
+                fragment_sender->send(dataPkt, transmit_info, SUBTYPE_DATA_TRANSMIT);
 
                 //-----------------> Clean up
-#ifdef WARP_LAYER_ENABLE
-                delete warp_layer;
-#endif
+                free(transmit_info);
                 cout << "Sent 1 data packet" << endl;
             }
         } else {//802.11 Control packets
@@ -141,33 +107,19 @@ bool process(PDU &pkt) {
                 EthernetII to_send = EthernetII(WARP, PC_ENGINE);
                 to_send.payload_type(WARP_PROTOCOL_TYPE);
 
-#ifdef WARP_LAYER_ENABLE
                 //-----------------> Create WARP transmit info
-                WARP_protocol::WARP_transmit_struct transmit_info;
-                transmit_info.power = DEFAULT_TRANSMIT_POWER;
-                transmit_info.rate = DEFAULT_TRANSMIT_RATE;
-                transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
-                transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-                transmit_info.retry = MAX_RETRY;
-                transmit_info.payload_size = (uint16_t) controlPacket.size();
-                convert_mac(&(transmit_info.bssid[0]), HOSTAPD);
+                WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();
+                transmit_info->retry = MAX_RETRY;
+                transmit_info->payload_size = (uint16_t) controlPacket.size();
 
                 //-----------------> Create WARP layer and append at the end
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
-                to_send = to_send / (*warp_layer) / controlPacket;
-#else
-                to_send = to_send / controlPacket;
-#endif
-
-                sender->send(to_send);
+                fragment_sender->send(controlPacket, transmit_info, SUBTYPE_DATA_TRANSMIT);
 
                 //-----------------> Clean up
-#ifdef WARP_LAYER_ENABLE
-                delete warp_layer;
-#endif
+                free(transmit_info);
                 cout << "Sent 1 control packet" << endl;
             } else {
-                //cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;
+                cerr << "Inner Layer is " << pkt.inner_pdu()->pdu_type() << "! Skipping..." << endl;
             }
         }
     } else {
@@ -192,8 +144,8 @@ void set_out_interface(const char* output) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc >= 3) {
-		set_in_interface(argv[1]);
+    if (argc >= 3) {
+        set_in_interface(argv[1]);
         set_out_interface(argv[2]);
         cout << "Init pc to warp from " << argv[1] << " to " << argv[2] << endl;
 
@@ -201,11 +153,13 @@ int main(int argc, char *argv[]) {
             Config::HOSTAPD = Tins::HWAddress<6>(argv[3]);
             cout << "hostapd mac is " << argv[3] << endl;
         }
-	} else {
+    } else {
         set_in_interface("hwsim0");
         set_out_interface("eth0");
         cout << "Init pc to warp from hwsim0 to eth0" << endl;
-	}
+    }
 
-	sniff(in_interface);
+    fragment_sender = new FragmentSender(sender);
+
+    sniff(in_interface);
 }

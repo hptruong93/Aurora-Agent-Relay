@@ -1,10 +1,13 @@
-#ifndef WARP_TRANSMIT_PDU_H
-#define WARP_TRANSMIT_PDU_H
+#ifndef WARP_PROTOCOL_H
+#define WARP_PROTOCOL_H
 
 #include "tins/macros.h"
 #include "tins/pdu.h"
 #include "tins/tins.h"
- 
+#include "../revised_version/config.h"
+
+#define WARP_PROTOCOL_TYPE                  0x8ae
+#define WARP_PROTOCOL_MAX_SIZE                        100
 #define WARP_PROTOCOL_HEADER_LENGTH                   2
 
 #define TYPE_INDEX                                    0
@@ -16,6 +19,14 @@
 //For type = transmit
 #define SUBTYPE_MANGEMENT_TRANSMIT                    0
 #define SUBTYPE_DATA_TRANSMIT                         1
+
+//For fragment info
+#define FRAGMENT_INFO_LENGTH                          5
+#define FRAGMENT_ID_INDEX                             0
+#define FRAGMENT_NUMBER_INDEX                         1
+#define FRAGMENT_TOTAL_NUMBER_INDEX                   2
+#define FRAGMENT_BYTE_OFFSET_MSB                      3
+#define FRAGMENT_BYTE_OFFSET_LSB                      4
 
 //For type = control
 #define TRANSMIT_ELEMENT_LENGTH                       7
@@ -31,8 +42,7 @@
 #define DEFAULT_TRANSMIT_CHANNEL                      1
 #define DEFAULT_TRANSMIT_FLAG                         0
 #define DEFAULT_TRANSMIT_RETRY                        0
-
-
+#define MAX_RETRY                                     7
 
 
 namespace Tins {
@@ -42,20 +52,29 @@ namespace Tins {
     public:
         
         struct WARP_transmit_struct {
-            uint8_t power;
-            uint8_t rate;
-            uint8_t channel;
             uint8_t flag;
             uint8_t retry;
             uint16_t payload_size;
             uint8_t bssid[6];
         };
         
+        struct WARP_fragment_struct {
+            uint8_t id;
+            uint8_t fragment_number;
+            uint8_t total_number_fragment;
+            uint16_t byte_offset;
+            uint32_t length;
+        };
+        
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 
         static uint32_t process_warp_layer(uint8_t* input_buffer);
 
-        static WARP_protocol* create_transmit(WARP_transmit_struct* info, uint8_t subtype);
+        static WARP_transmit_struct* get_default_transmit_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
+
+        static WARP_fragment_struct* generate_fragment_struct();
+
+        static WARP_protocol* create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype);
 
         static WARP_protocol* create_mac_control(uint8_t operation_code, uint8_t* mac_address);
 

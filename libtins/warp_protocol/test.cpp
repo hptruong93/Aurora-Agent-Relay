@@ -25,11 +25,14 @@ int main() {
 
     // sender.send(ether);
 
-    auto it = ETHSRC.begin();
-
-    for (; it != ETHSRC.end(); it++) {
-        uint8_t a = *it;
-        printf("%02x-", a);
+    uint8_t data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    RawPDU aa(data, 10);
+    PDU::serialization_type serial = aa.serialize();
+    uint8_t* buffer = &serial[0];
+    uint8_t i = 0;
+    for (; i < 10; i++) {
+        printf("%d-", buffer[i]);
     }
+
     return 0;
 }

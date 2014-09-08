@@ -4,15 +4,15 @@
 #include "config.h"
 #include "util.h"
 #include <tins/tins.h>
+#include "../send_receive_module/fragment_sender.h"
 #include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
 using namespace Config;
 using namespace std;
 
-#define WARP_LAYER_ENABLE
-
 PacketSender *sender;
+FragmentSender* fragment_sender;
 string in_interface;
 
 bool process(PDU &pkt) {
@@ -20,33 +20,17 @@ bool process(PDU &pkt) {
         //For now forward everything
         if (1 == 1) {
             //Add an ethernet frame and send over iface to warp
-            EthernetII to_send = EthernetII(WARP, PC_ENGINE);
-            to_send.payload_type(WARP_PROTOCOL_TYPE);
-
-#ifdef WARP_LAYER_ENABLE
             //-----------------> Create WARP transmit info
-            WARP_protocol::WARP_transmit_struct transmit_info;
-            transmit_info.power = DEFAULT_TRANSMIT_POWER;
-            transmit_info.rate = DEFAULT_TRANSMIT_RATE;
-            transmit_info.channel = DEFAULT_TRANSMIT_CHANNEL;
-            transmit_info.flag = DEFAULT_TRANSMIT_FLAG;
-            transmit_info.retry = MAX_RETRY;
-            transmit_info.payload_size = (uint16_t) pkt.size();
-            convert_mac(&(transmit_info.bssid[0]), HOSTAPD);
+            WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();
+            transmit_info->retry = MAX_RETRY;
+            transmit_info->payload_size = (uint16_t) pkt.size();
 
             //-----------------> Create WARP layer and append at the end
-            WARP_protocol* warp_layer = WARP_protocol::create_transmit(&transmit_info, SUBTYPE_DATA_TRANSMIT);
-            to_send = to_send / (*warp_layer) / (pkt);
-#else
-            to_send = to_send / pkt;
-#endif
-            cout << "Size is " << to_send.size() << endl;
-            sender->send(to_send);
+            cout << "Original ethernet packet size is " << pkt.size() << endl;
+            fragment_sender->send(pkt, transmit_info, SUBTYPE_DATA_TRANSMIT);
 
             //-----------------> Clean up
-#ifdef WARP_LAYER_ENABLE
-            delete warp_layer;
-#endif
+            free(transmit_info);
             cout << "Sent 1 data packet" << endl;
         }
     } else {
@@ -86,5 +70,6 @@ int main(int argc, char *argv[]) {
         cout << "Init pc to warp from hwsim0 to eth0" << endl;
 	}
 
+    fragment_sender = new FragmentSender(sender);
 	sniff(in_interface);
 }
