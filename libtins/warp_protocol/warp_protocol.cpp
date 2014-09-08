@@ -78,10 +78,10 @@ namespace Tins {
         memcpy(&(buffer[2]), &(info->bssid[0]), 6);
         buffer[FLAG_INDEX] = info->flag;
         buffer[RETRY_INDEX] = info->retry;
-        buffer[DATA_LENGTH_MSB] = (info->payload_size >> 8) & 0xff;
-        buffer[DATA_LENGTH_LSB] = info->payload_size & 0xff;
+        
 
         if (subtype == SUBTYPE_DATA_TRANSMIT) {
+            info->payload_size += FRAGMENT_INFO_LENGTH;
             if (fragment_info == NULL) {
                 cout << "NULL fragment info detected..." << endl;
             }
@@ -92,7 +92,9 @@ namespace Tins {
             buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
             buffer[16] = (fragment_info->byte_offset) & 0xff;
         }
-        
+
+        buffer[DATA_LENGTH_MSB] = (info->payload_size >> 8) & 0xff;
+        buffer[DATA_LENGTH_LSB] = info->payload_size & 0xff;
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);
@@ -127,8 +129,10 @@ namespace Tins {
     }
     
     WARP_protocol::~WARP_protocol() {
-        //cout << "Deleting " << size << endl;
-        //delete [] buffer;
+    }
+
+    void WARP_protocol::free_buffer() {
+        free(buffer);
     }
 
     //Serialize entire packet (only assert if running in debug mode)

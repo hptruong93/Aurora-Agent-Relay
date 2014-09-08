@@ -38,6 +38,7 @@ void FragmentSender::send(PDU& pkt, WARP_protocol::WARP_transmit_struct* transmi
         to_send = to_send / (*warp_layer) / (pkt);
         this->sender->send(to_send);
         cout << "Sent management" << endl;
+        warp_layer->free_buffer();
         free(warp_layer);
     } else if (subtype == SUBTYPE_DATA_TRANSMIT) {
         //Some data packets need to be checked if length exceed management protocol
@@ -59,6 +60,7 @@ void FragmentSender::send(PDU& pkt, WARP_protocol::WARP_transmit_struct* transmi
             printf("Header size is %d\n", warp_layer->header_size());
             uint8_t* packet_data = &(pkt.serialize()[0]);
 
+            warp_layer->free_buffer();
             free(warp_layer);
             for (; i < total_number_fragment; i++) {
                 printf("Looping with index = %d\n", i);
@@ -87,6 +89,7 @@ void FragmentSender::send(PDU& pkt, WARP_protocol::WARP_transmit_struct* transmi
                 //Assemble and send
                 sending = sending / (*warp_layer) / current_fragment;
                 this->sender->send(sending);
+                warp_layer->free_buffer();
                 free(warp_layer);
             }
         } else {//Send in one fragment

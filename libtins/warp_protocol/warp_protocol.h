@@ -90,6 +90,8 @@ namespace Tins {
         
         ~WARP_protocol();
 
+        void free_buffer();
+
         //Returns PDU Type (Getter)
         PDUType pdu_type() const { return pdu_flag; }
         

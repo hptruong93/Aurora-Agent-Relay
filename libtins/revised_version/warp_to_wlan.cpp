@@ -50,74 +50,58 @@ bool process(PDU &pkt) {
         uint32_t fragment_index = WARP_protocol::process_warp_layer(warp_layer_buffer);
         receive_result* receive_result = packet_receive(warp_layer_buffer + fragment_index, warp_layer.header_size() - fragment_index);
 
-        uint8_t in = 0;
-        for (; in < 10; in++) {
-            printf("%d-", warp_layer_buffer[fragment_index + in]);
-        }
-        printf("\nStart %d\n", receive_result->status);
         if (receive_result->status == READY_TO_SEND) {
-            uint8_t* data_buffer = receive_result->packet_address;
+            warp_layer_buffer = receive_result->packet_address;
             uint32_t data_length = receive_result->info_address->length;
-            uint32_t index = 0;
 
-            printf("Length is %d\n", data_length);
-
-            for (; index < data_length; index++) {
-                printf("%d-", data_buffer[index]);
-            }
-        }
-        printf("End\n");
-        free(receive_result->info_address);
-        free(receive_result);
-
-        // if (processed_bytes != 0) {
-        //     //RawPDU payload(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
-        //     Dot11 dot11(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
+            //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
+            Dot11 dot11(warp_layer_buffer, data_length);
             
-        //     if (dot11.type() == Dot11::MANAGEMENT) {
-        //         //Put in radio tap and send to output
-        //         RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
-        //         RadioTap to_send = header /  RawPDU(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
+            if (dot11.type() == Dot11::MANAGEMENT) {
+                //Put in radio tap and send to output
+                RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
+                RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
 
-        //         sender->default_interface(mon_interface);
-        //         sender->send(to_send);
-        //         cout << "Sent 1 packet to " << mon_interface << endl;
-        //     } else if (dot11.type() == Dot11::DATA) {
-        //         Dot11Data data_frame(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
-        //         cout << "Inner layer of data frame is " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
+                sender->default_interface(mon_interface);
+                sender->send(to_send);
+                cout << "Sent 1 packet to " << mon_interface << endl;
+            } else if (dot11.type() == Dot11::DATA) {
+                Dot11Data data_frame(warp_layer_buffer, data_length);
+                cout << "Inner layer of data frame is " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                 
-        //         if (data_frame.inner_pdu()->pdu_type() == PDU::RAW) {
-        //             RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
-        //             RadioTap to_send = header /  RawPDU(warp_layer_buffer + processed_bytes, warp_layer.header_size() - processed_bytes);
+                if (data_frame.inner_pdu()->pdu_type() == PDU::RAW) {
+                    RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
+                    RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
 
-        //             sender->default_interface(mon_interface);
-        //             sender->send(to_send);
-        //             cout << "Sent 1 packet to " << mon_interface << endl;
-        //         } else {
-        //             try {
-        //                 SNAP snap = data_frame.rfind_pdu<SNAP>();
+                    sender->default_interface(mon_interface);
+                    sender->send(to_send);
+                    cout << "Sent 1 packet to " << mon_interface << endl;
+                } else {
+                    try {
+                        SNAP snap = data_frame.rfind_pdu<SNAP>();
 
-        //                 //Append ethernet frame then send. But from where and to where???
-        //                 EthernetII to_send = EthernetII(data_frame.addr3(), data_frame.addr2());
-        //                 to_send = to_send / (*(snap.inner_pdu()));
-        //                 to_send.payload_type(snap.eth_type());
+                        //Append ethernet frame then send. But from where and to where???
+                        EthernetII to_send = EthernetII(data_frame.addr3(), data_frame.addr2());
+                        to_send = to_send / (*(snap.inner_pdu()));
+                        to_send.payload_type(snap.eth_type());
 
-        //                 sender->default_interface(wlan_interface);
+                        sender->default_interface(wlan_interface);
 
-        //                 sender->send(to_send);
-        //                 cout << "Sent 1 packet to " << wlan_interface << endl;
-        //             } catch (exception& e) {
-        //                 cout << "Snap not found. Not raw either. payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
-        //             }
-        //         }
-        //     } else if (dot11.type() == Dot11::CONTROL) {
-        //         cout << "Drop control packet." << endl;    
-        //     } else {
-        //         cout << "Invalid IEEE802.11 packet type..." << endl;
-        //     }
-        // } else {
-        //     cout << "Invalid warp layer. Drop 1 packet." << endl;
-        // }
+                        sender->send(to_send);
+                        cout << "Sent 1 packet to " << wlan_interface << endl;
+                    } catch (exception& e) {
+                        cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
+                    }
+                }
+            } else if (dot11.type() == Dot11::CONTROL) {
+                cout << "Drop control packet." << endl;    
+            } else {
+                cout << "Invalid IEEE802.11 packet type..." << endl;
+            }
+            //Clean up
+            free(receive_result->info_address);
+            free(receive_result);
+        }
     }
     return true;
 }
@@ -140,34 +124,28 @@ void set_out_interface(const char* output) {
 
 int main(int argc, char *argv[]) {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
-    //Disalbed for testing purpose
-    // if (argc >= 3) {
-    //     set_in_interface(argv[1]);
-    //     set_out_interface(argv[2]);
-    //     cout << "Init warp to wlan from " << argv[1] << " to " << argv[2] << endl;
+    
+    if (argc >= 3) {
+        set_in_interface(argv[1]);
+        set_out_interface(argv[2]);
+        cout << "Init warp to wlan from " << argv[1] << " to " << argv[2] << endl;
 
-    //     if (argc >= 4) {
-    //         mon_interface = argv[2];
-    //         wlan_interface = argv[3];
-    //         cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
-    //     }
+        if (argc >= 4) {
+            mon_interface = argv[2];
+            wlan_interface = argv[3];
+            cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
+        }
 
-    //     if (argc == 5) {
-    //         Config::HOSTAPD = Tins::HWAddress<6>(argv[4]);
-    //         cout << "hostapd mac is " << argv[4] << endl;
-    //     }
-    // } else {
-    //     set_in_interface("eth0");
-    //     set_out_interface("mon.wlan1");
+        if (argc == 5) {
+            Config::HOSTAPD = Tins::HWAddress<6>(argv[4]);
+            cout << "hostapd mac is " << argv[4] << endl;
+        }
+    } else {
+        set_in_interface("eth0");
+        set_out_interface("mon.wlan1");
 
-    //     mon_interface = "mon.wlan1";
-    // }
+        mon_interface = "mon.wlan1";
+    }
 
-    // sniff(in_interface);
-
-    EthernetII to_send = EthernetII(Config::PC_ENGINE, Config::WARP);
-    uint8_t data[] = {1, 1, 65, 65, 65, 65, 65, 65, 0, 0, 0, 4, 66, 1, 1, 0, 97, 97, 97, 97};
-    WARP_protocol test = WARP_protocol(data, sizeof(data));
-    to_send = to_send / test;
-    process(to_send);
+    sniff(in_interface);
 }

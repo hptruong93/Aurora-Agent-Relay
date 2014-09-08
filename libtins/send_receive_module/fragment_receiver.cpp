@@ -8,6 +8,7 @@
 
 // the number of spaces in the below arrays for info and data
 #define PACKET_SPACES                    20
+  
 
 using namespace Tins;
 
@@ -71,14 +72,14 @@ receive_result* packet_receive(uint8_t* packet_buffer, uint32_t data_length) {
     uint16_t byte_offset = ((uint16_t)(packet_buffer[FRAGMENT_BYTE_OFFSET_MSB] << 8)) & (packet_buffer[FRAGMENT_BYTE_OFFSET_LSB]);
     WARP_protocol::WARP_fragment_struct* fragment_info = create_info(id, fragment_number, byte_offset, total_number_fragment);
 
-    printf("fragment id is %d\n", id);
-    printf("fragment fragment_number is %d\n", fragment_number);
-    printf("fragment total_number_fragment is %d\n", total_number_fragment);
-    printf("fragment byte_offset is %d\n", byte_offset);
+    // printf("fragment id is %d\n", id);
+    // printf("fragment fragment_number is %d\n", fragment_number);
+    // printf("fragment total_number_fragment is %d\n", total_number_fragment);
+    // printf("fragment byte_offset is %d\n", byte_offset);
 
     dl_list wrap_around;
     wrap_around.data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;
-    receive_result* output = fragment_arrive(fragment_info, &wrap_around, data_length);
+    receive_result* output = fragment_arrive(fragment_info, &wrap_around, data_length - FRAGMENT_INFO_LENGTH);
 
     return output;
 }
@@ -99,13 +100,13 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
     // printf("ID is %d, number is %d, offset is %d and length is %d\n", info->id, info->fragment_number, info->byte_offset, data_length);
 
     if (info->total_number_fragment == 1) {
-         frag_result->status = READY_TO_SEND;
-         frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
-         
-         info->length = data_length;
-         frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)info;
-        
-         // printf("1\n");
+        frag_result->status = READY_TO_SEND;
+        frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
+
+        info->length = data_length;
+        frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)info;
+
+        // printf("1\n");
     } else if (checked_out_queue_addr[0] == 0) {
         // there have been no addresses added yet, so we input the location
         // of the first data element of the incoming fragment
@@ -289,7 +290,7 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
 Test program below. Ignore when integrated
 */
 
-int main(void) {
+int maain(void) {
     
     receive_result* fragResults;
     
