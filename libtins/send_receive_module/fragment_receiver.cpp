@@ -98,13 +98,22 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
     
     // printf("ID is %d, number is %d, offset is %d and length is %d\n", info->id, info->fragment_number, info->byte_offset, data_length);
 
-    if (checked_out_queue_addr[0] == 0) {
+    if (info->total_number_fragment == 1) {
+         frag_result->status = READY_TO_SEND;
+         frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
+         
+         info->length = data_length;
+         frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)info;
+        
+         // printf("1\n");
+    } else if (checked_out_queue_addr[0] == 0) {
         // there have been no addresses added yet, so we input the location
         // of the first data element of the incoming fragment
        
         // we keep track of how many fragments we are waiting for
         // by decrimenting the size. Thus, when size reaches 0, we know
         // that we have received all the fragments of this packet
+        
         
         info->total_number_fragment--;
         info->length = data_length;
@@ -118,8 +127,6 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
         frag_result->packet_address = 0;
         frag_result->info_address = 0;     
 
-        
-        // printf("1\n");
     } else {
         // addresses array has been initiated
         uint8_t i = 0;
@@ -339,8 +346,8 @@ int main(void) {
     WARP_protocol::WARP_fragment_struct* infoD1 = create_info(220, 1, 0, 1);
 
     
-    // fragResults = fragment_arrive(infoB3, &dataB3, 2);
-    // fragResults = fragment_arrive(infoB2, &dataB2, 1);
+     fragResults = fragment_arrive(infoB3, &dataB3, 2);
+     fragResults = fragment_arrive(infoB2, &dataB2, 1);
     // fragResults = fragment_arrive(infoA4, &dataA4, 1);
     // fragResults = fragment_arrive(infoA3, &dataA3, 3);
     // fragResults = fragment_arrive(infoC4, &dataC4, 2);
@@ -359,12 +366,12 @@ int main(void) {
     // printf("\n");
     
     
-    // fragResults = fragment_arrive(infoB1, &dataB1, 2); 
-    // printf("Packet length = %d\n", fragResults->info_address->length);
-    // for (i = 0; i < fragResults->info_address->length; i++){
-    //     printf("%d, ", fragResults->packet_address[i]);
-    // }
-    // printf("\n");
+     fragResults = fragment_arrive(infoB1, &dataB1, 2); 
+     printf("Packet length = %d\n", fragResults->info_address->length);
+     for (i = 0; i < (int)(fragResults->info_address->length); i++){
+         printf("%d, ", fragResults->packet_address[i]);
+     }
+     printf("\n");
     
     
     // fragResults = fragment_arrive(infoC3, &dataC3, 2);
@@ -374,9 +381,9 @@ int main(void) {
     // }
     // printf("\n");
 
-    fragResults = fragment_arrive(infoD1, &dataD1, 2);
+    fragResults = fragment_arrive(infoD1, &dataD1, 4);
     printf("Packet length = %d\n", fragResults->info_address->length);
-    for (i = 0; i < fragResults->info_address->length; i++){
+    for (i = 0; i < (int)(fragResults->info_address->length); i++){
         printf("%d, ", fragResults->packet_address[i]);
     }
     printf("\n");
