@@ -85,7 +85,7 @@ namespace Tins {
             uint32_t length;
         };
 
-        struct WAPR_mac_control_struct {
+        struct WARP_mac_control_struct {
             uint8_t operation_code;
             uint8_t mac_address[6];
         };
@@ -105,7 +105,7 @@ namespace Tins {
 
         static WARP_transmit_struct* get_default_transmit_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
 
-        static WAPR_mac_control_struct* get_default_mac_control_struct(Tins::HWAddress<6> mac_address = Config::DEFAULT_MAC);
+        static WARP_mac_control_struct* get_default_mac_control_struct(Tins::HWAddress<6> mac_address = Config::DEFAULT_MAC);
 
         static WARP_transmission_control_struct* get_default_transmission_control_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
 
@@ -113,7 +113,7 @@ namespace Tins {
 
         static WARP_protocol* create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype);
 
-        static WARP_protocol* create_mac_control(WAPR_mac_control_struct* info);
+        static WARP_protocol* create_mac_control(WARP_mac_control_struct* info);
 
         static WARP_protocol* create_transmission_control(WARP_transmission_control_struct* info);
 

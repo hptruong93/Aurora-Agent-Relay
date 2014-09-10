@@ -41,8 +41,8 @@ namespace Tins {
     WARP_protocol::WARP_mac_control_struct* WARP_protocol::get_default_mac_control_struct(Tins::HWAddress<6> mac_address) {
         WARP_mac_control_struct* output = (WARP_mac_control_struct*) calloc(sizeof(WARP_mac_control_struct), 0);
 
-        output->operation_code = DEAFULT_MAC_CONTROL_OPERATION_CODE;
-        convert_mac(&(outout->mac_address[0]), mac_address);
+        output->operation_code = DEFAULT_MAC_CONTROL_OPERATION_CODE;
+        convert_mac(&(output->mac_address[0]), mac_address);
 
         return output;
     }
@@ -124,7 +124,7 @@ namespace Tins {
 
         //MAC control
         buffer[2] = info->operation_code;
-        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0), 6);
+        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0]), 6);
 
         return new WARP_protocol(buffer, buffer_length);
     }
