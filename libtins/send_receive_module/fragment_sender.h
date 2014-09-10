@@ -17,7 +17,7 @@ public:
     FragmentSender(PacketSender* init_sender);
     ~FragmentSender();
 
-    void send(PDU& pkt, WARP_protocol::WARP_transmit_struct* transmit_info, uint8_t subtype);
+    void send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info);
 
     void set_sender(PacketSender* new_sender) {
         this->sender = new_sender;

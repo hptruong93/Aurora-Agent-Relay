@@ -50,6 +50,7 @@ bool process(PDU &pkt) {
         uint32_t fragment_index = WARP_protocol::process_warp_layer(warp_layer_buffer);
         receive_result* receive_result = packet_receive(warp_layer_buffer + fragment_index, warp_layer.header_size() - fragment_index);
 
+        printf("status is %d\n", receive_result->status);
         if (receive_result->status == READY_TO_SEND) {
             warp_layer_buffer = receive_result->packet_address;
             uint32_t data_length = receive_result->info_address->length;

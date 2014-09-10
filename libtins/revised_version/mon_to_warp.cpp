@@ -74,7 +74,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Using fragment sender to send
-                fragment_sender->send(management_frame, transmit_info, SUBTYPE_MANGEMENT_TRANSMIT);
+                fragment_sender->send(management_frame, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -91,7 +91,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) dataPkt.size();
 
                 //-----------------> Using fragment sender to send
-                fragment_sender->send(dataPkt, transmit_info, SUBTYPE_DATA_TRANSMIT);
+                fragment_sender->send(dataPkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -113,7 +113,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) controlPacket.size();
 
                 //-----------------> Create WARP layer and append at the end
-                fragment_sender->send(controlPacket, transmit_info, SUBTYPE_DATA_TRANSMIT);
+                fragment_sender->send(controlPacket, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);

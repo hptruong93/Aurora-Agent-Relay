@@ -7,8 +7,8 @@
 #include <tins/tins.h>
 #include "../warp_protocol/warp_protocol.h"
 
-#ifndef FRAGMENT_MANAGER_H_
-#define FRAGMENT_MANAGER_H_
+#ifndef FRAGMENT_RECEIVER_H_
+#define FRAGMENT_RECEIVER_H_
 
 #define READY_TO_SEND                           1
 #define WAITING_FOR_FIRST_FRAGMENT              2

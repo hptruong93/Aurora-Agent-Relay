@@ -47,8 +47,8 @@ receive_result* fragment_arrive(Tins::WARP_protocol::WARP_fragment_struct* info,
     // new fragment with any fragments whose buffer locations are stored in the array,
     // add the location of fragments from new packets to the array and remove completed
     // fragments
-dl_list** checked_out_queue_addr = (dl_list**) calloc(PACKET_SPACES, sizeof(dl_list*));;
-WARP_protocol::WARP_fragment_struct** info_addr = (WARP_protocol::WARP_fragment_struct**) calloc(PACKET_SPACES, sizeof(WARP_protocol::WARP_fragment_struct*));
+dl_list** checked_out_queue_addr = (dl_list**) calloc(PACKET_SPACES * sizeof(dl_list*), 0);
+WARP_protocol::WARP_fragment_struct** info_addr = (WARP_protocol::WARP_fragment_struct**) calloc(PACKET_SPACES * sizeof(WARP_protocol::WARP_fragment_struct*), 0);
 
 /**********************************************************************************************************************/
 
@@ -72,10 +72,12 @@ receive_result* packet_receive(uint8_t* packet_buffer, uint32_t data_length) {
     uint16_t byte_offset = ((uint16_t)(packet_buffer[FRAGMENT_BYTE_OFFSET_MSB] << 8)) & (packet_buffer[FRAGMENT_BYTE_OFFSET_LSB]);
     WARP_protocol::WARP_fragment_struct* fragment_info = create_info(id, fragment_number, byte_offset, total_number_fragment);
 
-    // printf("fragment id is %d\n", id);
-    // printf("fragment fragment_number is %d\n", fragment_number);
-    // printf("fragment total_number_fragment is %d\n", total_number_fragment);
-    // printf("fragment byte_offset is %d\n", byte_offset);
+
+    printf("Jajaaja %d %d %d", packet_buffer[0], packet_buffer[1], packet_buffer[2]);
+    printf("fragment id is %d\n", id);
+    printf("fragment fragment_number is %d\n", fragment_number);
+    printf("fragment total_number_fragment is %d\n", total_number_fragment);
+    printf("fragment byte_offset is %d\n", byte_offset);
 
     dl_list wrap_around;
     wrap_around.data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;

@@ -2,7 +2,7 @@
 #include "config.h"
 
 namespace Config {
-    const uint16_t MAX_ETHERNET_LENGTH = 25;//1475; //Actually 1500 but reserve 25 bytes for future development
+    const uint16_t MAX_ETHERNET_LENGTH = 1475; //Actually 1500 but reserve 25 bytes for future development
 
     Tins::HWAddress<6> BROADCAST("ff:ff:ff:ff:ff:ff");
     Tins::HWAddress<6> HOSTAPD("40:d8:55:04:22:84");

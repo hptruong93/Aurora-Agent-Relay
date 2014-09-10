@@ -27,7 +27,7 @@ bool process(PDU &pkt) {
 
             //-----------------> Create WARP layer and append at the end
             cout << "Original ethernet packet size is " << pkt.size() << endl;
-            fragment_sender->send(pkt, transmit_info, SUBTYPE_DATA_TRANSMIT);
+            fragment_sender->send(pkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
             //-----------------> Clean up
             free(transmit_info);

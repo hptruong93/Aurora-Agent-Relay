@@ -16,15 +16,12 @@ namespace Tins {
     
     uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer) {
         if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
-            if (input_buffer[SUBTYPE_INDEX] == SUBTYPE_DATA_TRANSMIT) {
-                uint8_t* bssid = &(input_buffer[BSSID_INDEX]);
-                uint8_t flag = input_buffer[FLAG_INDEX];
-                uint8_t retry = input_buffer[RETRY_INDEX];
-                uint16_t data_length = (input_buffer[DATA_LENGTH_MSB] << 8) & (input_buffer[DATA_LENGTH_LSB]);
-                return FRAGMENT_INFO_INDEX;
-            } else {
-                return 0;
-            }
+            //For future usage???
+            // uint8_t* bssid = &(input_buffer[BSSID_INDEX]);
+            // uint8_t flag = input_buffer[FLAG_INDEX];
+            // uint8_t retry = input_buffer[RETRY_INDEX];
+            // uint16_t data_length = (input_buffer[DATA_LENGTH_MSB] << 8) & (input_buffer[DATA_LENGTH_LSB]);
+            return FRAGMENT_INFO_INDEX;
         } else {
             return 0;
         }
@@ -63,11 +60,7 @@ namespace Tins {
         uint8_t* buffer;
         uint8_t buffer_length;
 
-        if (subtype == SUBTYPE_MANGEMENT_TRANSMIT) {
-            buffer_length = 2 + 10;
-        } else if (subtype == SUBTYPE_DATA_TRANSMIT) {
-            buffer_length = 2 + 10 + 5;
-        }
+        buffer_length = 2 + 10 + 5;
         buffer = (uint8_t*) std::malloc(buffer_length);
 
         //Header
@@ -80,18 +73,16 @@ namespace Tins {
         buffer[RETRY_INDEX] = info->retry;
         
 
-        if (subtype == SUBTYPE_DATA_TRANSMIT) {
-            info->payload_size += FRAGMENT_INFO_LENGTH;
-            if (fragment_info == NULL) {
-                cout << "NULL fragment info detected..." << endl;
-            }
-
-            buffer[12] = fragment_info->id;
-            buffer[13] = fragment_info->fragment_number;
-            buffer[14] = fragment_info->total_number_fragment;
-            buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
-            buffer[16] = (fragment_info->byte_offset) & 0xff;
+        info->payload_size += FRAGMENT_INFO_LENGTH;
+        if (fragment_info == NULL) {
+            cout << "NULL fragment info detected..." << endl;
         }
+
+        buffer[12] = fragment_info->id;
+        buffer[13] = fragment_info->fragment_number;
+        buffer[14] = fragment_info->total_number_fragment;
+        buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
+        buffer[16] = (fragment_info->byte_offset) & 0xff;
 
         buffer[DATA_LENGTH_MSB] = (info->payload_size >> 8) & 0xff;
         buffer[DATA_LENGTH_LSB] = info->payload_size & 0xff;
