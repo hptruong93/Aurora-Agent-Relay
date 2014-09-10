@@ -38,6 +38,28 @@ namespace Tins {
         return output;
     }
 
+    WARP_protocol::WARP_mac_control_struct* WARP_protocol::get_default_mac_control_struct(Tins::HWAddress<6> mac_address) {
+        WARP_mac_control_struct* output = (WARP_mac_control_struct*) calloc(sizeof(WARP_mac_control_struct), 0);
+
+        output->operation_code = DEAFULT_MAC_CONTROL_OPERATION_CODE;
+        convert_mac(&(outout->mac_address[0]), mac_address);
+
+        return output;
+    }
+
+    WARP_protocol::WARP_transmission_control_struct* WARP_protocol::get_default_transmission_control_struct(Tins::HWAddress<6> bssid) {
+        WARP_transmission_control_struct* output = (WARP_transmission_control_struct*) calloc(sizeof(WARP_transmission_control_struct), 0);
+
+        output->disabled = DEFAULT_TRANSMISSION_CONTROL_DISABLED;
+        output->tx_power = DEFAULT_TRANSMISSION_CONTROL_TX_POWER;
+        output->channel = DEFAULT_TRANSMISSION_CONTROL_CHANNEL;
+        output->rate = DEFAULT_TRANSMISSION_CONTROL_RATE;
+        output->hw_mode = DEFAULT_TRANSMISSION_CONTROL_HW_MODE;
+        convert_mac(&(output->bssid[0]), bssid);
+
+        return output;
+    }
+
     WARP_protocol::WARP_fragment_struct* WARP_protocol::generate_fragment_struct() {
         static uint8_t id_counter = 0;
 
@@ -92,18 +114,41 @@ namespace Tins {
         return output;
     }
 
-    WARP_protocol* WARP_protocol::create_mac_control(uint8_t operation_code, uint8_t* mac_address) {
-        uint8_t buffer[9];
+    WARP_protocol* WARP_protocol::create_mac_control(WARP_mac_control_struct* info) {
+        uint8_t buffer_length = WARP_PROTOCOL_HEADER_LENGTH + MAC_CONTROL_ELEMENT_LENGTH;
+        uint8_t buffer[buffer_length];
 
         //Header
-        buffer[TYPE_INDEX] = 0x02;
-        buffer[SUBTYPE_INDEX] = 0x02;
+        buffer[TYPE_INDEX] = TYPE_CONTROL;
+        buffer[SUBTYPE_INDEX] = SUBTYPE_MAC_ADDRESS_CONTROL;
 
         //MAC control
-        buffer[2] = operation_code;
-        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, mac_address, 6);
+        buffer[2] = info->operation_code;
+        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0), 6);
 
-        return new WARP_protocol(buffer, 9);
+        return new WARP_protocol(buffer, buffer_length);
+    }
+
+    WARP_protocol* WARP_protocol::create_transmission_control(WARP_transmission_control_struct* info) {
+        uint8_t* buffer;
+        uint8_t buffer_length;
+
+        buffer_length = WARP_PROTOCOL_HEADER_LENGTH + TRANSMISSION_CONTROL_ELEMENT_LENGTH;
+        buffer = (uint8_t*) std::malloc(buffer_length);
+
+        //Header
+        buffer[TYPE_INDEX] = TYPE_CONTROL;
+        buffer[SUBTYPE_INDEX] = SUBTYPE_TRANSMISSION_CONTROL;
+
+        //Control
+        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH, &(info->bssid[0]), 6);
+        buffer[DISABLED_INDEX] = info->disabled;
+        buffer[TX_POWER_INDEX] = info->tx_power;
+        buffer[CHANNEL_INDEX] = info->channel;
+        buffer[RATE_INDEX] = info->rate;
+        buffer[HW_MODE_INDEX] = info->hw_mode;
+
+        return new WARP_protocol(buffer, buffer_length);
     }
 
     /*********************************************************************************************************

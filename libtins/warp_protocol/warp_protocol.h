@@ -10,9 +10,15 @@
 #define WARP_PROTOCOL_MAX_SIZE                        100
 #define WARP_PROTOCOL_HEADER_LENGTH                   2
 
+//Length of elements
+#define TRANSMIT_ELEMENT_LENGTH                       7
+#define MAC_CONTROL_ELEMENT_LENGTH                    7
+#define TRANSMISSION_CONTROL_ELEMENT_LENGTH           11        
+
 #define TYPE_INDEX                                    0
 #define SUBTYPE_INDEX                                 1
 
+#define TYPE_IGNORE                                   0
 #define TYPE_TRANSMIT                                 1
 #define TYPE_CONTROL                                  2
 
@@ -36,12 +42,13 @@
 #define FRAGMENT_BYTE_OFFSET_LSB                      4
 
 //For type = control
-#define TRANSMIT_ELEMENT_LENGTH                       7
-#define MAC_CONTROL_ELEMENT_LENGTH                    7
-
-//For type = control
 #define SUBTYPE_TRANSMISSION_CONTROL                  1
 #define SUBTYPE_MAC_ADDRESS_CONTROL                   2
+#define DISABLED_INDEX                                8
+#define TX_POWER_INDEX                                9
+#define CHANNEL_INDEX                                 10
+#define RATE_INDEX                                    11
+#define HW_MODE_INDEX                                 12
 
 
 #define DEFAULT_TRANSMIT_POWER                        0
@@ -50,7 +57,12 @@
 #define DEFAULT_TRANSMIT_FLAG                         0
 #define DEFAULT_TRANSMIT_RETRY                        0
 #define MAX_RETRY                                     7
-
+#define DEFAULT_MAC_CONTROL_OPERATION_CODE            0
+#define DEFAULT_TRANSMISSION_CONTROL_DISABLED         0
+#define DEFAULT_TRANSMISSION_CONTROL_TX_POWER         0
+#define DEFAULT_TRANSMISSION_CONTROL_CHANNEL          2
+#define DEFAULT_TRANSMISSION_CONTROL_RATE             1
+#define DEFAULT_TRANSMISSION_CONTROL_HW_MODE          0
 
 namespace Tins {
  
@@ -72,6 +84,20 @@ namespace Tins {
             uint16_t byte_offset;
             uint32_t length;
         };
+
+        struct WAPR_mac_control_struct {
+            uint8_t operation_code;
+            uint8_t mac_address[6];
+        };
+
+        struct WARP_transmission_control_struct {
+            uint8_t bssid[6];
+            uint8_t disabled;
+            uint8_t tx_power;
+            uint8_t channel;
+            uint8_t rate;
+            uint8_t hw_mode;
+        };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 
@@ -79,11 +105,17 @@ namespace Tins {
 
         static WARP_transmit_struct* get_default_transmit_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
 
+        static WAPR_mac_control_struct* get_default_mac_control_struct(Tins::HWAddress<6> mac_address = Config::DEFAULT_MAC);
+
+        static WARP_transmission_control_struct* get_default_transmission_control_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
+
         static WARP_fragment_struct* generate_fragment_struct();
 
         static WARP_protocol* create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype);
 
-        static WARP_protocol* create_mac_control(uint8_t operation_code, uint8_t* mac_address);
+        static WARP_protocol* create_mac_control(WAPR_mac_control_struct* info);
+
+        static WARP_protocol* create_transmission_control(WARP_transmission_control_struct* info);
 
         //Constructor with buffer
         WARP_protocol(const uint8_t *data, uint32_t total_sz);
