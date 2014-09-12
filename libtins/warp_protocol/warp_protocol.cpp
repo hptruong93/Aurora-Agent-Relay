@@ -115,8 +115,10 @@ namespace Tins {
     }
 
     WARP_protocol* WARP_protocol::create_mac_control(WARP_mac_control_struct* info) {
+        uint8_t* buffer;
         uint8_t buffer_length = WARP_PROTOCOL_HEADER_LENGTH + MAC_CONTROL_ELEMENT_LENGTH;
-        uint8_t buffer[buffer_length];
+        
+        buffer = (uint8_t*) std::malloc(buffer_length);
 
         //Header
         buffer[TYPE_INDEX] = TYPE_CONTROL;
@@ -124,6 +126,7 @@ namespace Tins {
 
         //MAC control
         buffer[2] = info->operation_code;
+        cout<<"???????"<<endl;
         memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0]), 6);
 
         return new WARP_protocol(buffer, buffer_length);

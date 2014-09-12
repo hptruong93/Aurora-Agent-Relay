@@ -28,16 +28,16 @@ WARP_ProtocolSender::~WARP_ProtocolSender()
 
 void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info)
 {
-	//At this point, assume that transmit_info has been setup correctly
+    //At this point, assume that transmit_info has been setup correctly
     EthernetII to_send = EthernetII(WARP, PC_ENGINE);
     to_send.payload_type(WARP_PROTOCOL_TYPE);
 
     if (type == TYPE_TRANSMIT) {
-    	// Transmit Info cannot be null
-    	if (transmit_info == NULL) {
-    		cout<<"Transmit Info cannot be null for transmit packet."<<endl;
-    		return;
-    	}
+        // Transmit Info cannot be null
+        if (transmit_info == NULL) {
+            cout<<"Transmit Info cannot be null for transmit packet."<<endl;
+            return;
+        }
 
         //Some data packets need to be checked if length exceed ethernet protocol
         WARP_protocol::WARP_fragment_struct* fragment_info = WARP_protocol::generate_fragment_struct();
@@ -108,18 +108,19 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
 void WARP_ProtocolSender::set_sender(PacketSender* new_sender)
 {
-	this->sender = new_sender;
+    this->sender = new_sender;
 }
 
 PacketSender* WARP_ProtocolSender::get_sender()
 {
-	return this->sender;
+    return this->sender;
 }
 
 // For testing
 int maain(void) {
     uint8_t buffer[] = {7, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
     RawPDU aa(buffer, sizeof(buffer));
+
     PacketSender* packet_sender = new PacketSender("eth1");
     WARP_ProtocolSender sender(packet_sender);
 
@@ -132,7 +133,17 @@ int maain(void) {
 
     memcpy(transmit_info.bssid, bssid, 6);
 
-    sender.send(aa, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, &transmit_info);
+    /*
+     * Uncomment this to test sending control packets
+    WARP_protocol::WARP_mac_control_struct* mac_control;
+    mac_control = (WARP_protocol::WARP_mac_control_struct*) calloc(sizeof(WARP_protocol::WARP_mac_control_struct), sizeof(uint8_t));
+    mac_control->operation_code = 0;
+    uint8_t mac_address[] = {10, 10, 10, 10, 10, 9};
+    memcpy(mac_control->mac_address, mac_address, 6);
+    WARP_protocol* aa = WARP_protocol::create_mac_control(mac_control);
+    */
+
+    sender.send((*aa), TYPE_CONTROL, SUBTYPE_MAC_ADDRESS_CONTROL);
 
     return 0;
 }
