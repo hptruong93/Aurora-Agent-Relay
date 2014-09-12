@@ -10,14 +10,14 @@ INC_UTIL = -I$(UTIL_DIR)
 
 all : test
 
-test : warp_protocol.o util.o fragment_sender.o config.o
-	$(CC) fragment_sender.o warp_protocol.o util.o config.o $(LFLAGS) -o test.out
+test : warp_protocol.o util.o warp_protocol_sender.o config.o
+	$(CC) warp_protocol_sender.o warp_protocol.o util.o config.o $(LFLAGS) -o test.out
 
 fragment_receiver.o : fragment_receiver.cpp
 	$(CC) fragment_receiver.cpp $(CFLAGS) -o fragment_receiver.o
 
-fragment_sender.o : fragment_sender.cpp
-	$(CC) fragment_sender.cpp $(CFLAGS) -o fragment_sender.o
+warp_protocol_sender.o : warp_protocol_sender.cpp
+	$(CC) warp_protocol_sender.cpp $(CFLAGS) -o warp_protocol_sender.o
 
 warp_protocol.o : $(WARP_PROTOCOL_DIR)warp_protocol.cpp
 	$(CC) $(WARP_PROTOCOL_DIR)warp_protocol.cpp $(CFLAGS) $(INC_WARP) -o warp_protocol.o

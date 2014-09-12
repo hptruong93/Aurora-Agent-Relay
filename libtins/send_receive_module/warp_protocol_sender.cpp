@@ -1,13 +1,13 @@
 /*
-* fragment_sender.c
+* warp_protocol_sender.cpp
+* Refactroed from fragment_sender.cpp
 *
-* Created on: 2014-09-02
-* Author: Hoai Phuoc Truong
+* Created On: 2014-09-12
+* Author: Hoai Phuoc Truong, Alan Yang
 */
 
-#include <tins/tins.h>
 #include <stdlib.h>
-#include "fragment_sender.h"
+#include "warp_protocol_sender.h"
 #include "../warp_protocol/warp_protocol.h"
 #include "../revised_version/util.h"
 #include "../revised_version/config.h"
@@ -18,20 +18,27 @@ using namespace std;
 using namespace Tins;
 using namespace Config;
 
-FragmentSender::FragmentSender(PacketSender* sender) {
-    this->sender = sender;
+WARP_ProtocolSender::WARP_ProtocolSender(PacketSender* init_sender) : sender(init_sender)
+{
 }
 
-FragmentSender::~FragmentSender() {
-    //Do nothing
+WARP_ProtocolSender::~WARP_ProtocolSender()
+{
 }
 
-void FragmentSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info) {
-    //At this point, assume that transmit_info has been setup correctly
+void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info)
+{
+	//At this point, assume that transmit_info has been setup correctly
     EthernetII to_send = EthernetII(WARP, PC_ENGINE);
     to_send.payload_type(WARP_PROTOCOL_TYPE);
 
     if (type == TYPE_TRANSMIT) {
+    	// Transmit Info cannot be null
+    	if (transmit_info == NULL) {
+    		cout<<"Transmit Info cannot be null for transmit packet."<<endl;
+    		return;
+    	}
+
         //Some data packets need to be checked if length exceed ethernet protocol
         WARP_protocol::WARP_fragment_struct* fragment_info = WARP_protocol::generate_fragment_struct();
         WARP_protocol* warp_layer = WARP_protocol::create_transmit(transmit_info, fragment_info, subtype);
@@ -99,11 +106,22 @@ void FragmentSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol
     }
 }
 
+void WARP_ProtocolSender::set_sender(PacketSender* new_sender)
+{
+	this->sender = new_sender;
+}
+
+PacketSender* WARP_ProtocolSender::get_sender()
+{
+	return this->sender;
+}
+
+// For testing
 int maain(void) {
     uint8_t buffer[] = {7, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
     RawPDU aa(buffer, sizeof(buffer));
     PacketSender* packet_sender = new PacketSender("eth1");
-    FragmentSender sender(packet_sender);
+    WARP_ProtocolSender sender(packet_sender);
 
     WARP_protocol::WARP_transmit_struct transmit_info;
     transmit_info.flag = 0;
