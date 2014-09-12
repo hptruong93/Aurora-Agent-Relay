@@ -133,6 +133,8 @@ int maain(void) {
 
     memcpy(transmit_info.bssid, bssid, 6);
 
+    sender.send(aa, TYPE_CONTROL, SUBTYPE_MAC_ADDRESS_CONTROL);
+
     /*
      * Uncomment this to test sending control packets
     WARP_protocol::WARP_mac_control_struct* mac_control;
@@ -141,9 +143,8 @@ int maain(void) {
     uint8_t mac_address[] = {10, 10, 10, 10, 10, 9};
     memcpy(mac_control->mac_address, mac_address, 6);
     WARP_protocol* aa = WARP_protocol::create_mac_control(mac_control);
-    */
-
     sender.send((*aa), TYPE_CONTROL, SUBTYPE_MAC_ADDRESS_CONTROL);
+    */
 
     return 0;
 }
