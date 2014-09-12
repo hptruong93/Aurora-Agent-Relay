@@ -47,8 +47,8 @@ receive_result* fragment_arrive(Tins::WARP_protocol::WARP_fragment_struct* info,
     // new fragment with any fragments whose buffer locations are stored in the array,
     // add the location of fragments from new packets to the array and remove completed
     // fragments
-dl_list** checked_out_queue_addr = (dl_list**) calloc(PACKET_SPACES * sizeof(dl_list*), 0);
-WARP_protocol::WARP_fragment_struct** info_addr = (WARP_protocol::WARP_fragment_struct**) calloc(PACKET_SPACES * sizeof(WARP_protocol::WARP_fragment_struct*), 0);
+dl_list** checked_out_queue_addr = (dl_list**) calloc(1, PACKET_SPACES * sizeof(dl_list*));
+WARP_protocol::WARP_fragment_struct** info_addr = (WARP_protocol::WARP_fragment_struct**) calloc(1, PACKET_SPACES * sizeof(WARP_protocol::WARP_fragment_struct*));
 
 /**********************************************************************************************************************/
 
@@ -57,7 +57,7 @@ uint8_t* get_data_buffer_from_queue(dl_list* input) {
 }
 
 WARP_protocol::WARP_fragment_struct* create_info(uint8_t id, uint8_t number, uint16_t byte_offset, uint8_t total_number_fragment) {
-    WARP_protocol::WARP_fragment_struct* info = (WARP_protocol::WARP_fragment_struct*) calloc(sizeof(WARP_protocol::WARP_fragment_struct), 0);
+    WARP_protocol::WARP_fragment_struct* info = (WARP_protocol::WARP_fragment_struct*) calloc(1, sizeof(WARP_protocol::WARP_fragment_struct));
     info->id = id;
     info->fragment_number = number;
     info->total_number_fragment = total_number_fragment;
@@ -73,11 +73,15 @@ receive_result* packet_receive(uint8_t* packet_buffer, uint32_t data_length) {
     WARP_protocol::WARP_fragment_struct* fragment_info = create_info(id, fragment_number, byte_offset, total_number_fragment);
 
 
-    printf("Jajaaja %d %d %d", packet_buffer[0], packet_buffer[1], packet_buffer[2]);
-    printf("fragment id is %d\n", id);
-    printf("fragment fragment_number is %d\n", fragment_number);
-    printf("fragment total_number_fragment is %d\n", total_number_fragment);
-    printf("fragment byte_offset is %d\n", byte_offset);
+    if (total_number_fragment > 1) {
+        printf("Fragment buffer is %d %d %d %d\n", packet_buffer[0], packet_buffer[1], packet_buffer[2], packet_buffer[3]);
+        printf("fragment id is %d\n", id);
+        printf("fragment fragment_number is %d\n", fragment_number);
+        printf("fragment total_number_fragment is %d\n", total_number_fragment);
+        printf("fragment byte_offset is %d\n", byte_offset);
+    } else {
+        printf("Bounce back\n");
+    }
 
     dl_list wrap_around;
     wrap_around.data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;
@@ -97,9 +101,9 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
     // packet
     uint8_t* data = get_data_buffer_from_queue(checked_out_queue);
 
-    receive_result* frag_result = (receive_result*) calloc(sizeof(receive_result), 0);
+    receive_result* frag_result = (receive_result*) calloc(1, sizeof(receive_result));
     
-    // printf("ID is %d, number is %d, offset is %d and length is %d\n", info->id, info->fragment_number, info->byte_offset, data_length);
+    printf("ID is %d, number is %d, offset is %d and length is %d\n", info->id, info->fragment_number, info->byte_offset, data_length);
 
     if (info->total_number_fragment == 1) {
         frag_result->status = READY_TO_SEND;
@@ -156,7 +160,7 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
                 frag_result->packet_address = NULL;
                 frag_result->info_address = NULL;     
                 
-                // printf("2\n");
+                printf("2\n");
                 
                 break;
                 
@@ -167,13 +171,12 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
                 
                 dl_list* test_data = checked_out_queue_addr[i];
                 WARP_protocol::WARP_fragment_struct* test_info = (WARP_protocol::WARP_fragment_struct*)info_addr[i];
-                
                 // printf("fragment id and number: %d %d\n", info->id, info->fragment_number);
                 // printf("fragment id test info and number: %d %d\n", test_info->id, test_info->fragment_number);
                 
                 if (info->id == test_info->id) {
                     uint8_t* test_data_buffer = get_data_buffer_from_queue(test_data);
-                    // printf("3: %d\n", i);
+                    printf("3: %d\n", i);
 
                     // we've found a match, therefore we look at the respective
                     // fragment numbers to see which is the lower packet number
@@ -252,8 +255,6 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
                             frag_result->packet_address = get_data_buffer_from_queue(test_data);
                             checked_out_queue_addr[i] = NULL;
                             
-                            
-
                             uint8_t k = i;
                             while (k < (PACKET_SPACES - 1) && checked_out_queue_addr[k + 1] != NULL){
                                 checked_out_queue_addr[k] = checked_out_queue_addr[k+1];

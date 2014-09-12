@@ -4,7 +4,7 @@
 #include "config.h"
 #include "util.h"
 #include <tins/tins.h>
-#include "../send_receive_module/fragment_sender.h"
+#include "../send_receive_module/warp_protocol_sender.h"
 #include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
@@ -12,7 +12,7 @@ using namespace Config;
 using namespace std;
 
 PacketSender *sender;
-FragmentSender* fragment_sender;
+WARP_ProtocolSender* warp_protocol_sender;
 string in_interface;
 
 bool process(PDU &pkt) {
@@ -27,7 +27,7 @@ bool process(PDU &pkt) {
 
             //-----------------> Create WARP layer and append at the end
             cout << "Original ethernet packet size is " << pkt.size() << endl;
-            fragment_sender->send(pkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+            warp_protocol_sender->send(pkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
             //-----------------> Clean up
             free(transmit_info);
@@ -70,6 +70,6 @@ int main(int argc, char *argv[]) {
         cout << "Init pc to warp from hwsim0 to eth0" << endl;
 	}
 
-    fragment_sender = new FragmentSender(sender);
+    warp_protocol_sender = new WARP_ProtocolSender(sender);
 	sniff(in_interface);
 }

@@ -4,7 +4,7 @@
 #include <tins/tins.h>
 #include "config.h"
 #include "util.h"
-#include "../send_receive_module/fragment_sender.h"
+#include "../send_receive_module/warp_protocol_sender.h"
 #include "../warp_protocol/warp_protocol.h"
 
 using namespace Tins;
@@ -12,7 +12,7 @@ using namespace Config;
 using namespace std;
 
 PacketSender* sender;
-FragmentSender* fragment_sender;
+WARP_ProtocolSender* warp_protocol_sender;
 string in_interface;
 
 string PDUTypeToString(int PDUTypeFlag) {
@@ -74,7 +74,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Using fragment sender to send
-                fragment_sender->send(management_frame, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, transmit_info);
+                warp_protocol_sender->send(management_frame, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -91,7 +91,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) dataPkt.size();
 
                 //-----------------> Using fragment sender to send
-                fragment_sender->send(dataPkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+                warp_protocol_sender->send(dataPkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -113,7 +113,7 @@ bool process(PDU &pkt) {
                 transmit_info->payload_size = (uint16_t) controlPacket.size();
 
                 //-----------------> Create WARP layer and append at the end
-                fragment_sender->send(controlPacket, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+                warp_protocol_sender->send(controlPacket, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
         cout << "Init pc to warp from hwsim0 to eth0" << endl;
     }
 
-    fragment_sender = new FragmentSender(sender);
+    warp_protocol_sender = new WARP_ProtocolSender(sender);
 
     sniff(in_interface);
 }

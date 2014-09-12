@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -O3 -lpthread -ltins -lpcap -c -std=c++0x 
-LFLAGS = -O3 -lpthread -ltins -lpcap -Wall -std=c++0x
+LFLAGS = -g -O3 -lpthread -ltins -lpcap -Wall -std=c++0x
 
 WARP_PROTOCOL_DIR = ../warp_protocol/
 INC_WARP_PROTOCOL = -I$(WARP_PROTOCOL_DIR)
@@ -14,11 +14,11 @@ all : mon_to_warp wlan_to_warp warp_to_wlan
 
 ###################################Linking files together##################################################
 
-mon_to_warp : util.o config.o warp_protocol.o fragment_sender.o mon_to_warp.o
-	$(CC) util.o config.o warp_protocol.o fragment_sender.o mon_to_warp.o $(LFLAGS) -o mon_to_warp.out
+mon_to_warp : util.o config.o warp_protocol.o  warp_protocol_sender.o mon_to_warp.o
+	$(CC) util.o config.o warp_protocol.o  warp_protocol_sender.o mon_to_warp.o $(LFLAGS) -o mon_to_warp.out
 
-wlan_to_warp : util.o config.o warp_protocol.o fragment_sender.o wlan_to_warp.o
-	$(CC) util.o config.o warp_protocol.o fragment_sender.o wlan_to_warp.o $(LFLAGS) -o wlan_to_warp.out
+wlan_to_warp : util.o config.o warp_protocol.o  warp_protocol_sender.o wlan_to_warp.o
+	$(CC) util.o config.o warp_protocol.o  warp_protocol_sender.o wlan_to_warp.o $(LFLAGS) -o wlan_to_warp.out
 
 warp_to_wlan : util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o
 	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
@@ -39,8 +39,8 @@ warp_to_wlan.o : warp_to_wlan.cpp
 fragment_receiver.o : $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp
 	$(CC) $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp $(CFLAGS) $(INC_SEND_MODULE) -o fragment_receiver.o
 
-fragment_sender.o : $(SEND_RECEIVE_MODULE_DIR)fragment_sender.cpp
-	$(CC) $(SEND_RECEIVE_MODULE_DIR)fragment_sender.cpp $(CFLAGS) $(INC_SEND_MODULE) -o fragment_sender.o
+warp_protocol_sender.o : $(SEND_RECEIVE_MODULE_DIR)warp_protocol_sender.cpp
+	$(CC) $(SEND_RECEIVE_MODULE_DIR)warp_protocol_sender.cpp $(CFLAGS) $(INC_SEND_MODULE) -o warp_protocol_sender.o
 
 warp_protocol.o : $(WARP_PROTOCOL_DIR)warp_protocol.cpp
 	$(CC) $(WARP_PROTOCOL_DIR)warp_protocol.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) -o warp_protocol.o

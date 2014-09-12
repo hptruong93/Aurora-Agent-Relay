@@ -42,7 +42,7 @@ string PDUTypeToString(int PDUTypeFlag) {
 
 bool process(PDU &pkt) {
     EthernetII &ethernet_packet = pkt.rfind_pdu<EthernetII>();
-    
+
     if (ethernet_packet.src_addr() == Config::WARP && ethernet_packet.dst_addr() == Config::PC_ENGINE) {
         WARP_protocol &warp_layer = ethernet_packet.rfind_pdu<WARP_protocol>();
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
@@ -62,9 +62,8 @@ bool process(PDU &pkt) {
                 //Put in radio tap and send to output
                 RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                 RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
-
-                sender->default_interface(mon_interface);
-                sender->send(to_send);
+                // sender->default_interface(mon_interface);
+                // sender->send(to_send);
                 cout << "Sent 1 packet to " << mon_interface << endl;
             } else if (dot11.type() == Dot11::DATA) {
                 Dot11Data data_frame(warp_layer_buffer, data_length);
@@ -99,10 +98,9 @@ bool process(PDU &pkt) {
             } else {
                 cout << "Invalid IEEE802.11 packet type..." << endl;
             }
-            //Clean up
-            free(receive_result->info_address);
-            free(receive_result);
         }
+        //Clean up
+        free(receive_result);
     }
     return true;
 }
@@ -142,10 +140,10 @@ int main(int argc, char *argv[]) {
             cout << "hostapd mac is " << argv[4] << endl;
         }
     } else {
-        set_in_interface("eth0");
-        set_out_interface("mon.wlan1");
+        set_in_interface("eth1");
 
-        mon_interface = "mon.wlan1";
+        mon_interface = "mon.wlan0";
+        wlan_interface = "wlan0";
     }
 
     sniff(in_interface);
