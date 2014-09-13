@@ -24,3 +24,17 @@ void convert_mac(uint8_t* result_mac, Tins::HWAddress<6> mac) {
 		i++;
 	}
 }
+
+void print_packet(uint8_t* packet, uint32_t length) {
+	uint32_t i = 0;
+	printf("Length is %d\n", length);
+
+	if (length > 500) {
+		length = 100;
+	}
+	
+	for (i = 0; i < length; i++) {
+		printf("%d-", packet[i]);
+	}
+	printf("\n");
+}

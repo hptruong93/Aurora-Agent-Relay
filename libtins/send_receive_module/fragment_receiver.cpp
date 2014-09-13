@@ -4,6 +4,7 @@
 #include <tins/tins.h>
 #include "fragment_receiver.h"
 #include "../warp_protocol/warp_protocol.h"
+#include "../revised_version/util.h"
 
 
 // the number of spaces in the below arrays for info and data
@@ -38,7 +39,7 @@ Creating buffer for management purpose (using malloc/ direct declaration) is
 If returned status is READ_TO_SEND, then all data must have been assembled in uint8_t* frame_data in the receive_result struct
 Can safely assume that the pointer passed in will be able to hold all data
 */
-receive_result* fragment_arrive(Tins::WARP_protocol::WARP_fragment_struct* info, dl_list* data, uint32_t data_length);
+void fragment_arrive(Tins::WARP_protocol::WARP_fragment_struct* info, dl_list* data, uint32_t data_length, receive_result* result);
 
 /**********************************************************************************************************************/
 //Initialization
@@ -47,8 +48,8 @@ receive_result* fragment_arrive(Tins::WARP_protocol::WARP_fragment_struct* info,
     // new fragment with any fragments whose buffer locations are stored in the array,
     // add the location of fragments from new packets to the array and remove completed
     // fragments
-dl_list** checked_out_queue_addr = (dl_list**) calloc(1, PACKET_SPACES * sizeof(dl_list*));
-WARP_protocol::WARP_fragment_struct** info_addr = (WARP_protocol::WARP_fragment_struct**) calloc(1, PACKET_SPACES * sizeof(WARP_protocol::WARP_fragment_struct*));
+dl_list* checked_out_queue_addr[PACKET_SPACES];
+WARP_protocol::WARP_fragment_struct* info_addr[PACKET_SPACES];
 
 /**********************************************************************************************************************/
 
@@ -56,8 +57,21 @@ uint8_t* get_data_buffer_from_queue(dl_list* input) {
     return input->data_addr;
 }
 
+void update_database(uint8_t index, WARP_protocol::WARP_fragment_struct* new_info, dl_list* new_queue) {
+    info_addr[index] = new_info;
+    checked_out_queue_addr[index] = new_queue;
+}
+
+void pugre_database() {
+    uint8_t i;
+    for (i = 0; i < PACKET_SPACES; i++) {
+        update_database(i, NULL, NULL);
+    }
+}
+
 WARP_protocol::WARP_fragment_struct* create_info(uint8_t id, uint8_t number, uint16_t byte_offset, uint8_t total_number_fragment) {
-    WARP_protocol::WARP_fragment_struct* info = (WARP_protocol::WARP_fragment_struct*) calloc(1, sizeof(WARP_protocol::WARP_fragment_struct));
+    WARP_protocol::WARP_fragment_struct* info = (WARP_protocol::WARP_fragment_struct*) malloc(sizeof(WARP_protocol::WARP_fragment_struct));
+
     info->id = id;
     info->fragment_number = number;
     info->total_number_fragment = total_number_fragment;
@@ -65,32 +79,47 @@ WARP_protocol::WARP_fragment_struct* create_info(uint8_t id, uint8_t number, uin
     return info;
 }
 
-receive_result* packet_receive(uint8_t* packet_buffer, uint32_t data_length) {
-    uint8_t id = packet_buffer[FRAGMENT_ID_INDEX];
-    uint8_t fragment_number = packet_buffer[FRAGMENT_NUMBER_INDEX];
-    uint8_t total_number_fragment = packet_buffer[FRAGMENT_TOTAL_NUMBER_INDEX];
-    uint16_t byte_offset = ((uint16_t)(packet_buffer[FRAGMENT_BYTE_OFFSET_MSB] << 8)) & (packet_buffer[FRAGMENT_BYTE_OFFSET_LSB]);
-    WARP_protocol::WARP_fragment_struct* fragment_info = create_info(id, fragment_number, byte_offset, total_number_fragment);
 
-
-    if (total_number_fragment > 1) {
-        printf("Fragment buffer is %d %d %d %d\n", packet_buffer[0], packet_buffer[1], packet_buffer[2], packet_buffer[3]);
-        printf("fragment id is %d\n", id);
-        printf("fragment fragment_number is %d\n", fragment_number);
-        printf("fragment total_number_fragment is %d\n", total_number_fragment);
-        printf("fragment byte_offset is %d\n", byte_offset);
-    } else {
-        printf("Bounce back\n");
+uint8_t find_packet_id(uint8_t id) {
+    uint8_t i;
+    uint8_t output = PACKET_SPACES; //Intentionally put invalid value so that if there is no space left the caller would know
+    for (i = 0; i < PACKET_SPACES; i++) {
+        dl_list* current = checked_out_queue_addr[i];
+        if (current != NULL) {
+            if (info_addr[i]->id == id) {
+                return i;
+            }
+        } else {
+            output = i;
+        }
     }
-
-    dl_list wrap_around;
-    wrap_around.data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;
-    receive_result* output = fragment_arrive(fragment_info, &wrap_around, data_length - FRAGMENT_INFO_LENGTH);
-
     return output;
 }
 
-receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_list* checked_out_queue, uint32_t data_length) {
+void assemble_result(uint8_t status, uint8_t* packet_address, WARP_protocol::WARP_fragment_struct* info_address, receive_result* result) {
+    result->status = status;
+    result->packet_address = packet_address;
+    result->info_address = info_address;
+}
+
+void packet_receive(uint8_t* packet_buffer, uint32_t data_length, receive_result* result) {
+    uint8_t id = packet_buffer[FRAGMENT_ID_INDEX];
+    uint8_t fragment_number = packet_buffer[FRAGMENT_NUMBER_INDEX];
+    uint8_t total_number_fragment = packet_buffer[FRAGMENT_TOTAL_NUMBER_INDEX];
+    uint16_t byte_offset = ((uint16_t)(packet_buffer[FRAGMENT_BYTE_OFFSET_MSB] << 8)) + (packet_buffer[FRAGMENT_BYTE_OFFSET_LSB]);
+    WARP_protocol::WARP_fragment_struct* fragment_info = (WARP_protocol::WARP_fragment_struct*) std::malloc(sizeof(WARP_protocol::WARP_fragment_struct));
+
+    fragment_info->id = id;
+    fragment_info->fragment_number = fragment_number;
+    fragment_info->total_number_fragment = total_number_fragment;
+    fragment_info->byte_offset = (uint16_t) byte_offset;
+
+    dl_list* wrap_around = (dl_list*) std::malloc(sizeof(dl_list));
+    wrap_around->data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;
+    fragment_arrive(fragment_info, wrap_around, data_length - FRAGMENT_INFO_LENGTH, result);
+}
+
+void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, dl_list* new_queue, uint32_t data_length, receive_result* result) {
     // assemble and store data contained in buffers being read into this function.
     // When a fragment is received and its packet still requires more fragments
     // to be complete return WAITING_FOR_FRAGMENT. Because the function receives a pointer to the
@@ -99,194 +128,103 @@ receive_result* fragment_arrive(WARP_protocol::WARP_fragment_struct* info, dl_li
     // return READY_TO_SEND so that the main program knows that
     // the first element of the addresses array contains the address to the reassembled
     // packet
-    uint8_t* data = get_data_buffer_from_queue(checked_out_queue);
+    uint8_t* new_data_buffer = get_data_buffer_from_queue(new_queue);
+    // printf("ID is %d, number is %d, total is %d, offset is %d and length is %d\n", new_info->id, new_info->fragment_number, new_info->total_number_fragment, new_info->byte_offset, data_length);
 
-    receive_result* frag_result = (receive_result*) calloc(1, sizeof(receive_result));
-    
-    printf("ID is %d, number is %d, offset is %d and length is %d\n", info->id, info->fragment_number, info->byte_offset, data_length);
+    if (new_info->total_number_fragment == 1) {
+        //Bounce back immediately
+        new_info->length = data_length;
+        assemble_result(READY_TO_SEND, get_data_buffer_from_queue(new_queue), new_info, result);
 
-    if (info->total_number_fragment == 1) {
-        frag_result->status = READY_TO_SEND;
-        frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
-
-        info->length = data_length;
-        frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)info;
-
-        // printf("1\n");
-    } else if (checked_out_queue_addr[0] == 0) {
-        // there have been no addresses added yet, so we input the location
-        // of the first data element of the incoming fragment
-       
-        // we keep track of how many fragments we are waiting for
-        // by decrimenting the size. Thus, when size reaches 0, we know
-        // that we have received all the fragments of this packet
-        
-        
-        info->total_number_fragment--;
-        info->length = data_length;
-        
-        info_addr[0] = info;
-        
-        checked_out_queue_addr[0] = checked_out_queue;
-        
-        frag_result->status = WAITING_FOR_FRAGMENT;
-                            
-        frag_result->packet_address = 0;
-        frag_result->info_address = 0;     
-
+        //Free input
+        free(new_queue);
     } else {
-        // addresses array has been initiated
-        uint8_t i = 0;
-        
-        for (i = 0; i < PACKET_SPACES; i++) {
-            // run through the array of packets, seeing if the packet number
-            // of a stored fragment matches the one in the incoming fragment
-            // printf("loop: %d\n", i);
-            
-            if (checked_out_queue_addr[i] == NULL){
-                // we've checked all the stored packet info and the new
-                // fragment isn't a match to any of them. Thus, we store
-                // this fragment in the first 0 element we see
-                
-                info->total_number_fragment--;
-                info->length = data_length;
-        
-                info_addr[i] = info;
-        
-                checked_out_queue_addr[i] = checked_out_queue;
-                
-                frag_result->status = WAITING_FOR_FRAGMENT;
-                            
-                frag_result->packet_address = NULL;
-                frag_result->info_address = NULL;     
-                
-                printf("2\n");
-                
-                break;
-                
-            } else {
-                // cross reference the first element of the i'th stored fragment
-                // (the number of the packet it belongs to) with the first
-                // element of the incoming data.
-                
-                dl_list* test_data = checked_out_queue_addr[i];
-                WARP_protocol::WARP_fragment_struct* test_info = (WARP_protocol::WARP_fragment_struct*)info_addr[i];
-                // printf("fragment id and number: %d %d\n", info->id, info->fragment_number);
-                // printf("fragment id test info and number: %d %d\n", test_info->id, test_info->fragment_number);
-                
-                if (info->id == test_info->id) {
-                    uint8_t* test_data_buffer = get_data_buffer_from_queue(test_data);
-                    printf("3: %d\n", i);
+        result->status = WAITING_FOR_FRAGMENT;
+        uint8_t found = find_packet_id(new_info->id);
 
-                    // we've found a match, therefore we look at the respective
-                    // fragment numbers to see which is the lower packet number
-                    // and add the data elements from the higher fragment
-                    // number to the lower fragment number
-                    
-                    if (info->fragment_number < test_info->fragment_number) {
-                    // printf("4 Copying to new buffer\n");
-                    
-                    // incoming fragment is the lower fragment number
-                    
-                        uint16_t rel_offset = test_info->byte_offset - info->byte_offset;
-                        // find relative byte_offset of stored fragment from new
-                        // fragment in order to know where to place data in
-                        // new fragment
-                        memmove(data + rel_offset, test_data_buffer, test_info->length);
-                        info->length = test_info->byte_offset - info->byte_offset + test_info->length;
+        if (found == PACKET_SPACES) {//Database full...
+            printf("Database is full!!! Something went wrong???\n");
+            pugre_database();
+            //Try again
+            fragment_arrive(new_info, new_queue, data_length, result);
+        } else if (info_addr[found] == NULL) {
+            //This is the first fragment of this given ID
 
-                        if (test_info->total_number_fragment - 1 == 0) {
-                        // this new fragment contains the last pieces of the
-                        // packet that we need. Provide the outside program 
-                        // with the data and info addresses of the newly-modified
-                        // "data" fragment, remove its address from the array
-                        // and shift up each of the addresses after it
-                         
-                            frag_result->status = READY_TO_SEND;
-                            
-                            frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
-                            checked_out_queue_addr[i] = NULL;
-                            
-                            
-                            uint8_t k = i;
-                            
-                            while (k < (PACKET_SPACES - 1) && checked_out_queue_addr[k + 1] != NULL){
-                                checked_out_queue_addr[k] = checked_out_queue_addr[k+1];
-                                checked_out_queue_addr[k + 1] = NULL;
-                                
-                                k++;
-                            }
-            
-                            frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)info;
+            //Put this into memory
+            update_database(found, new_info, new_queue);
 
-                            k = i;
-                            free(info_addr[i]);
-                            while (k < (PACKET_SPACES - 1) && info_addr[k + 1] != NULL){
-                                info_addr[k] = info_addr[k+1];
-                                info_addr[k + 1] = NULL;
-                                
-                                k++;
-                            }
-                        } else {      
-                            // decrement the size in info for management 
-                            // purposes and store the data and info addresses
-                            // before letting the outside program know the result
-                            info->total_number_fragment = test_info->total_number_fragment - 1;                   
-                            
-                            frag_result->status = WAITING_FOR_FRAGMENT;
-                            frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue_addr[i]);
-                            frag_result->info_address = NULL;
+            //Update
+            new_info->length = data_length;
+            new_info->total_number_fragment--;
 
-                            checked_out_queue_addr[i] = checked_out_queue;
-                            info_addr[i] = info;
-                        }
-                    } else {
-                        // printf("5 Copying to old buffer\n");
-                        uint16_t rel_offset = info->byte_offset - test_info->byte_offset;
-                        memmove(test_data_buffer + rel_offset, data, data_length);
-                        
-                        if (info->byte_offset - test_info->byte_offset + data_length > test_info->length) {
-                            test_info->length = info->byte_offset - test_info->byte_offset + data_length;
-                        }
+            //Assemble output
+            assemble_result(WAITING_FOR_FRAGMENT, NULL, NULL, result);
+        } else {
+            //A previous packets have already arrived
+            WARP_protocol::WARP_fragment_struct* previous_info = info_addr[found];
 
-                        if (test_info->total_number_fragment - 1 == 0){                   
-                            test_info->total_number_fragment = info->total_number_fragment;
-                            frag_result->status = READY_TO_SEND;
-                            frag_result->packet_address = get_data_buffer_from_queue(test_data);
-                            checked_out_queue_addr[i] = NULL;
-                            
-                            uint8_t k = i;
-                            while (k < (PACKET_SPACES - 1) && checked_out_queue_addr[k + 1] != NULL){
-                                checked_out_queue_addr[k] = checked_out_queue_addr[k+1];
-                                checked_out_queue_addr[k + 1] = NULL;
-                                k++;
-                            }                     
-                            
-                            frag_result->info_address = (WARP_protocol::WARP_fragment_struct*)test_info;  
-                            
-                            k = i;
-                            free(info_addr[i]);
-                            while (k < (PACKET_SPACES - 1) && info_addr[k + 1] != NULL){
-                                info_addr[k] = info_addr[k+1];
-                                info_addr[k + 1] = NULL;
-                                
-                                k++;
-                            }
-                            
-                        } else {
-                            test_info->total_number_fragment--;
-                            frag_result->status = WAITING_FOR_FRAGMENT;
+            dl_list* previous_queue = checked_out_queue_addr[found];
+            uint8_t* previous_data_buffer = get_data_buffer_from_queue(previous_queue);
 
-                            frag_result->packet_address = get_data_buffer_from_queue(checked_out_queue);
-                            frag_result->info_address = NULL;                            
-                        }
-                    }
-                    break;
+            if (new_info->fragment_number < previous_info->fragment_number) {
+                //Copy to new buffer
+                uint16_t relative_offset = previous_info->byte_offset - new_info->byte_offset;
+                memmove(new_data_buffer + relative_offset, previous_data_buffer, previous_info->length);
+                //Update length
+                new_info->length = relative_offset + previous_info->length;
+
+                if (previous_info->total_number_fragment == 1) {//The last fragment has arrived. Ready to send
+                    assemble_result(READY_TO_SEND, new_data_buffer, new_info, result);
+
+                    //Pugre the entry
+                    update_database(found, NULL, NULL);
+                    free(previous_info);
+                    free(previous_queue);
+                } else {//Still waiting for fragments
+                    //Throw out the old buffer
+                    assemble_result(WAITING_FOR_FRAGMENT, previous_data_buffer, NULL, result);
+
+                    //Update fragment count
+                    new_info->total_number_fragment = previous_info->total_number_fragment - 1;
+
+                    //Update database
+                    update_database(found, new_info, new_queue);
                 }
+            } else if (new_info->fragment_number > previous_info->fragment_number) {
+                //Copy to old buffer
+                uint16_t relative_offset = new_info->byte_offset - previous_info->byte_offset;
+                memcpy(previous_data_buffer + relative_offset, new_data_buffer, data_length);
+
+                //Update length if applicable
+                if (relative_offset + data_length > previous_info->length) {
+                    //If the new fragment is at the end, update the length
+                    previous_info->length = relative_offset + data_length;
+                }
+
+                if (previous_info->total_number_fragment == 1) {//The last fragment has arrived. Ready to send
+                    assemble_result(READY_TO_SEND, previous_data_buffer, previous_info, result);
+
+                    //Pugre the entry
+                    update_database(found, NULL, NULL);
+                    free(new_info);
+                    free(new_queue);
+                } else {
+                    //Throw out the new buffer
+                    assemble_result(WAITING_FOR_FRAGMENT, new_data_buffer, NULL, result);
+
+                    //Update fragment count
+                    previous_info->total_number_fragment--;
+
+                    //Update database
+                    //Nothing to do here since we are still using the old info
+                }
+            } else {//Duplicated packet???
+                //Drop
+                assemble_result(WAITING_FOR_FRAGMENT, NULL, NULL, result);
             }
+
         }
     }
-    return frag_result;
 }
 
 /*
@@ -295,102 +233,67 @@ Test program below. Ignore when integrated
 
 int maain(void) {
     
-    receive_result* fragResults;
+    receive_result fragResults;
     
     //{packet #, fragment #, # of fragments, packet length, fragment byte_offset, , data}
-    uint8_t data_buff_A1[] = {0, 1, 2, 3, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_A2[] = {4, 5, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_A3[] = {6, 7, 8, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_A4[] = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t data_buff_A1[] = {220, 0, 4, 0, 0,      0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t data_buff_A2[] = {220, 1, 4, 0, 4,      4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t data_buff_A3[] = {220, 2, 4, 0, 6,      6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t data_buff_A4[] = {220, 3, 4, 0, 9,      9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    dl_list dataA1, dataA2, dataA3, dataA4, dataB1, dataB2, dataB3, dataC1, dataC2, dataC3, dataC4, dataC5;
-    dl_list dataD1;
-    dataA1.data_addr = data_buff_A1;
-    dataA2.data_addr = data_buff_A2;
-    dataA3.data_addr = data_buff_A3;
-    dataA4.data_addr = data_buff_A4;
+    uint8_t data_buff_B1[] = {221, 0, 2, 0, 0,      0, 1, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t data_buff_B2[] = {221, 1, 2, 0, 7,      7, 8, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    uint8_t data_buff_B1[] = {10, 11, 0, 0, 0};
-    uint8_t data_buff_B2[] = {12, 0, 0, 0, 0};
-    uint8_t data_buff_B3[] = {13, 14, 0, 0, 0};    
-    dataB1.data_addr = data_buff_B1;
-    dataB2.data_addr = data_buff_B2;
-    dataB3.data_addr = data_buff_B3;
-    
-    uint8_t data_buff_C1[] = {15, 16, 17, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_C2[] = {19, 20, 21, 22, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_C3[] = {24, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_C4[] = {26, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    uint8_t data_buff_C5[] = {28, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    dataC1.data_addr = data_buff_C1;
-    dataC2.data_addr = data_buff_C2;
-    dataC3.data_addr = data_buff_C3;
-    dataC4.data_addr = data_buff_C4;
-    dataC5.data_addr = data_buff_C5;
+    uint8_t* bigC1 = (uint8_t*) malloc(2048);
+    uint8_t* bigC2 = (uint8_t*) malloc(2048);
 
-    uint8_t data_buff_D1[] = {65, 65, 65, 65};
-    dataD1.data_addr = data_buff_D1;
-
-    
-    WARP_protocol::WARP_fragment_struct* infoA1 = create_info(222, 1, 0, 4);
-    WARP_protocol::WARP_fragment_struct* infoA2 = create_info(222, 2, 4, 4);
-    WARP_protocol::WARP_fragment_struct* infoA3 = create_info(222, 3, 6, 4);
-    WARP_protocol::WARP_fragment_struct* infoA4 = create_info(222, 4, 9, 4);
-
-    WARP_protocol::WARP_fragment_struct* infoB1 = create_info(211, 1, 0, 3);
-    WARP_protocol::WARP_fragment_struct* infoB2 = create_info(211, 2, 2, 3);
-    WARP_protocol::WARP_fragment_struct* infoB3 = create_info(211, 3, 3, 3);
-    
-    WARP_protocol::WARP_fragment_struct* infoC1 = create_info(225, 1, 0, 5);
-    WARP_protocol::WARP_fragment_struct* infoC2 = create_info(225, 2, 4, 5);
-    WARP_protocol::WARP_fragment_struct* infoC3 = create_info(225, 3, 9, 5);
-    WARP_protocol::WARP_fragment_struct* infoC4 = create_info(225, 4, 11, 5);
-    WARP_protocol::WARP_fragment_struct* infoC5 = create_info(225, 5, 13, 5);
-    
-    WARP_protocol::WARP_fragment_struct* infoD1 = create_info(220, 1, 0, 1);
-
-    
-     fragResults = fragment_arrive(infoB3, &dataB3, 2);
-     fragResults = fragment_arrive(infoB2, &dataB2, 1);
-    // fragResults = fragment_arrive(infoA4, &dataA4, 1);
-    // fragResults = fragment_arrive(infoA3, &dataA3, 3);
-    // fragResults = fragment_arrive(infoC4, &dataC4, 2);
-    // fragResults = fragment_arrive(infoC5, &dataC5, 2);
-    // fragResults = fragment_arrive(infoC1, &dataC1, 4);
-    // fragResults = fragment_arrive(infoC2, &dataC2, 5);
-    // fragResults = fragment_arrive(infoA1, &dataA1, 4);
-    // fragResults = fragment_arrive(infoA2, &dataA2, 2);
-
-    
-    int i = 0;
-    // printf("Packet length = %d\n", fragResults->info_address->length);
-    // for (i = 0; i < fragResults->info_address->length; i++) {
-    //     printf("%d, ", fragResults->packet_address[i]);
-    // }
-    // printf("\n");
-    
-    
-     fragResults = fragment_arrive(infoB1, &dataB1, 2); 
-     printf("Packet length = %d\n", fragResults->info_address->length);
-     for (i = 0; i < (int)(fragResults->info_address->length); i++){
-         printf("%d, ", fragResults->packet_address[i]);
-     }
-     printf("\n");
-    
-    
-    // fragResults = fragment_arrive(infoC3, &dataC3, 2);
-    // printf("Packet length = %d\n", fragResults->info_address->length);
-    // for (i = 0; i < fragResults->info_address->length; i++){
-    //     printf("%d, ", fragResults->packet_address[i]);
-    // }
-    // printf("\n");
-
-    fragResults = fragment_arrive(infoD1, &dataD1, 4);
-    printf("Packet length = %d\n", fragResults->info_address->length);
-    for (i = 0; i < (int)(fragResults->info_address->length); i++){
-        printf("%d, ", fragResults->packet_address[i]);
+    uint16_t le = 5;
+    for (; le < 505; le++) {
+        bigC1[le] = le;
+        bigC2[le] = 65000 - le;
     }
-    printf("\n");
+    bigC1[0] = 112;
+    bigC1[1] = 0;
+    bigC1[2] = 2;
+    bigC1[3] = 0;
+    bigC1[4] = 0;
+
+    bigC2[0] = 112;
+    bigC2[1] = 1;
+    bigC2[2] = 2;
+    bigC2[3] = 1;
+    bigC2[4] = 244;
+
+    uint8_t repeat = 0;
+
+    // while (1 == 1) {
+    //     if (repeat == 0) {
+            // packet_receive(data_buff_B2, 5 + 6, &fragResults);
+            // packet_receive(data_buff_B1, 5 + 7, &fragResults);
+            // repeat = 1;
+        // } else {
+            // packet_receive(data_buff_A1, 5 + 4, &fragResults);
+            // packet_receive(data_buff_A3, 5 + 3, &fragResults);
+            // packet_receive(data_buff_A2, 5 + 2, &fragResults);
+            // packet_receive(data_buff_A4, 5 + 1, &fragResults);
+            // repeat = 0;
+        // }
+
+    for (; repeat < 255; repeat++) {
+    packet_receive(bigC1, 5 + 500, &fragResults);
+    packet_receive(bigC2, 5 + 500, &fragResults);}
+
+        if (fragResults.status == READY_TO_SEND) {
+            uint8_t i;
+            uint8_t* buffer = fragResults.packet_address;
+            printf("Length is %d\n", fragResults.info_address->length);
+            // for (i = 0; i < fragResults.info_address->length; i++) {
+            //     printf("%d-", buffer[i]);
+            // }
+
+        }
+        printf("\n");
+    // }
 }
 
 

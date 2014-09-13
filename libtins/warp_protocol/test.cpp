@@ -8,6 +8,7 @@ using namespace Tins;
 
 HWAddress<6> ETHSRC("a0:a1:a2:a3:a4:a5"); //PCEngine --> hostapd
 HWAddress<6> ETHDST("d0:d1:d2:d3:d4:d5"); //WARP
+HWAddress<6> TEST_MAC("00:00:00:00:00:00"); // TEST MAC ADDRESS
 
 int main() {
     //Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(0x8ae);
@@ -24,6 +25,10 @@ int main() {
     // PacketSender sender("eth0");
 
     // sender.send(ether);
+
+    WARP_protocol::WARP_mac_control_struct* test_ptr = WARP_protocol::get_default_mac_control_struct(TEST_MAC);
+    WARP_protocol* test = WARP_protocol::create_mac_control(test_ptr);
+    printf("Yes?? %d\n", test->get_buffer()[0]);
 
     uint8_t data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     RawPDU aa(data, 10);

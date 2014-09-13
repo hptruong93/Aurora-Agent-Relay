@@ -29,11 +29,11 @@
 #define BSSID_INDEX                                   2 //6 bytes following will be bssid
 #define FLAG_INDEX                                    8
 #define RETRY_INDEX                                   9
-#define DATA_LENGTH_MSB                               10
-#define DATA_LENGTH_LSB                               11
-#define FRAGMENT_INFO_INDEX                           12
+#define DATA_LENGTH_MSB_INDEX                         10
+#define DATA_LENGTH_LSB_INDEX                         11
 
 //For fragment info
+#define FRAGMENT_INFO_INDEX                           12
 #define FRAGMENT_INFO_LENGTH                          5
 #define FRAGMENT_ID_INDEX                             0
 #define FRAGMENT_NUMBER_INDEX                         1
@@ -70,20 +70,20 @@ namespace Tins {
 
     public:
         
-        struct WARP_transmit_struct {
+        typedef struct WARP_transmit {
             uint8_t flag;
             uint8_t retry;
             uint16_t payload_size;
             uint8_t bssid[6];
-        };
+        } WARP_transmit_struct;
         
-        struct WARP_fragment_struct {
+        typedef struct WARP_fragment {
             uint8_t id;
             uint8_t fragment_number;
             uint8_t total_number_fragment;
             uint16_t byte_offset;
             uint32_t length;
-        };
+        } WARP_fragment_struct;
 
         struct WARP_mac_control_struct {
             uint8_t operation_code;
@@ -101,7 +101,7 @@ namespace Tins {
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 
-        static uint32_t process_warp_layer(uint8_t* input_buffer);
+        static uint32_t process_warp_layer(uint8_t* input_buffer, WARP_transmit_struct* transmit_result);
 
         static WARP_transmit_struct* get_default_transmit_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
 

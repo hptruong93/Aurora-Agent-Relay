@@ -10,8 +10,8 @@ INC_UTIL = -I$(UTIL_DIR)
 
 all : test
 
-test : warp_protocol.o util.o warp_protocol_sender.o config.o
-	$(CC) warp_protocol_sender.o warp_protocol.o util.o config.o $(LFLAGS) -o test.out
+test : warp_protocol.o util.o fragment_receiver.o config.o
+	$(CC) fragment_receiver.o warp_protocol.o util.o config.o $(LFLAGS) -o test.out
 
 fragment_receiver.o : fragment_receiver.cpp
 	$(CC) fragment_receiver.cpp $(CFLAGS) -o fragment_receiver.o

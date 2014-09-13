@@ -7,6 +7,7 @@
 #include "config.h"
 #include "../warp_protocol/warp_protocol.h"
 #include "../send_receive_module/fragment_receiver.h"
+#include "util.h"
 
 using namespace Tins;
 using namespace std;
@@ -42,32 +43,43 @@ string PDUTypeToString(int PDUTypeFlag) {
 
 bool process(PDU &pkt) {
     EthernetII &ethernet_packet = pkt.rfind_pdu<EthernetII>();
-
+    
     if (ethernet_packet.src_addr() == Config::WARP && ethernet_packet.dst_addr() == Config::PC_ENGINE) {
         WARP_protocol &warp_layer = ethernet_packet.rfind_pdu<WARP_protocol>();
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
 
-        uint32_t fragment_index = WARP_protocol::process_warp_layer(warp_layer_buffer);
-        receive_result* receive_result = packet_receive(warp_layer_buffer + fragment_index, warp_layer.header_size() - fragment_index);
+        WARP_protocol::WARP_transmit_struct transmit_result;
+        uint32_t fragment_index = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
 
-        printf("status is %d\n", receive_result->status);
-        if (receive_result->status == READY_TO_SEND) {
-            warp_layer_buffer = receive_result->packet_address;
-            uint32_t data_length = receive_result->info_address->length;
+        receive_result receive_result;
+        packet_receive(warp_layer_buffer + fragment_index, transmit_result.payload_size, &receive_result);
+
+        if (receive_result.status == READY_TO_SEND) {
+            warp_layer_buffer = receive_result.packet_address;
+            uint32_t data_length = receive_result.info_address->length;
 
             //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
             Dot11 dot11(warp_layer_buffer, data_length);
-            
-            if (dot11.type() == Dot11::MANAGEMENT) {
+            auto type = dot11.type();
+            if (type == Dot11::MANAGEMENT) {
                 //Put in radio tap and send to output
                 RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                 RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
-                // sender->default_interface(mon_interface);
-                // sender->send(to_send);
+
+                sender->default_interface(mon_interface);
+                sender->send(to_send);
                 cout << "Sent 1 packet to " << mon_interface << endl;
-            } else if (dot11.type() == Dot11::DATA) {
+            } else if (type == Dot11::DATA) {
+                if (data_length <= 46) {//Magic?? 32 is the length of 802.11 header. 46 is min length of ethernet payload
+                    //Padd with 0???
+                    uint8_t i = 0;
+                    for (i = data_length; i <= 46; i++) {
+                        warp_layer_buffer[i] = 0;
+                    }
+
+                    data_length = 46;
+                }
                 Dot11Data data_frame(warp_layer_buffer, data_length);
-                cout << "Inner layer of data frame is " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                 
                 if (data_frame.inner_pdu()->pdu_type() == PDU::RAW) {
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
@@ -93,14 +105,12 @@ bool process(PDU &pkt) {
                         cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                     }
                 }
-            } else if (dot11.type() == Dot11::CONTROL) {
+            } else if (type == Dot11::CONTROL) {
                 cout << "Drop control packet." << endl;    
             } else {
                 cout << "Invalid IEEE802.11 packet type..." << endl;
             }
         }
-        //Clean up
-        free(receive_result);
     }
     return true;
 }
@@ -141,9 +151,13 @@ int main(int argc, char *argv[]) {
         }
     } else {
         set_in_interface("eth1");
+        set_out_interface("mon.wlan0");
 
         mon_interface = "mon.wlan0";
         wlan_interface = "wlan0";
+
+        cout << "Init warp to wlan from eth1 to mon.wlan0" << endl;
+        cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
     }
 
     sniff(in_interface);

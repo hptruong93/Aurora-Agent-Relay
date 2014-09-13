@@ -21,5 +21,5 @@ typedef struct {
 } receive_result;
 
 //The buffer will starts with fragment info. WARP should not distinguish between management and data packets
-receive_result* packet_receive(uint8_t* packet_buffer, uint32_t data_length);
+void packet_receive(uint8_t* packet_buffer, uint32_t data_length, receive_result* result);
 #endif

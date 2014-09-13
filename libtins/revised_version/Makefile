@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -O3 -lpthread -ltins -lpcap -c -std=c++0x 
-LFLAGS = -g -O3 -lpthread -ltins -lpcap -Wall -std=c++0x
+LFLAGS = -O3 -lpthread -ltins -lpcap -Wall -std=c++0x
 
 WARP_PROTOCOL_DIR = ../warp_protocol/
 INC_WARP_PROTOCOL = -I$(WARP_PROTOCOL_DIR)

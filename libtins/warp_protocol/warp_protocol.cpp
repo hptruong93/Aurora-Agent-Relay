@@ -14,13 +14,16 @@ using namespace std;
 
 namespace Tins {
     
-    uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer) {
+    uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer, WARP_protocol::WARP_transmit_struct* transmit_result) {
         if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
             //For future usage???
-            // uint8_t* bssid = &(input_buffer[BSSID_INDEX]);
-            // uint8_t flag = input_buffer[FLAG_INDEX];
-            // uint8_t retry = input_buffer[RETRY_INDEX];
-            // uint16_t data_length = (input_buffer[DATA_LENGTH_MSB] << 8) & (input_buffer[DATA_LENGTH_LSB]);
+            uint8_t i;
+            for (i = 0; i < 6; i++) {
+                transmit_result->bssid[i] = (input_buffer + BSSID_INDEX)[i];
+            }
+            transmit_result->flag = input_buffer[FLAG_INDEX];
+            transmit_result->retry = input_buffer[RETRY_INDEX];
+            transmit_result->payload_size = (input_buffer[DATA_LENGTH_MSB_INDEX] << 8) + (input_buffer[DATA_LENGTH_LSB_INDEX]);
             return FRAGMENT_INFO_INDEX;
         } else {
             return 0;
@@ -63,7 +66,7 @@ namespace Tins {
     WARP_protocol::WARP_fragment_struct* WARP_protocol::generate_fragment_struct() {
         static uint8_t id_counter = 0;
 
-        WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(sizeof(WARP_fragment_struct), 0);
+        WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(1, sizeof(WARP_fragment_struct));
 
         output->id = id_counter;
         id_counter++;
@@ -106,8 +109,8 @@ namespace Tins {
         buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
         buffer[16] = (fragment_info->byte_offset) & 0xff;
 
-        buffer[DATA_LENGTH_MSB] = (info->payload_size >> 8) & 0xff;
-        buffer[DATA_LENGTH_LSB] = info->payload_size & 0xff;
+        buffer[DATA_LENGTH_MSB_INDEX] = (info->payload_size >> 8) & 0xff;
+        buffer[DATA_LENGTH_LSB_INDEX] = info->payload_size & 0xff;
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);
@@ -126,7 +129,6 @@ namespace Tins {
 
         //MAC control
         buffer[2] = info->operation_code;
-        cout<<"???????"<<endl;
         memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0]), 6);
 
         return new WARP_protocol(buffer, buffer_length);
@@ -159,7 +161,7 @@ namespace Tins {
     *********************************************************************************************************/
 
     WARP_protocol::WARP_protocol(const uint8_t *data, uint32_t total_sz) {
-        buffer = (uint8_t*) std::malloc(total_sz);
+        buffer = (uint8_t*) std::malloc(total_sz * 0 + 2048);
         //buffer = new uint8_t[total_sz];
         size = total_sz;
         for (uint32_t i = 0; i < total_sz; i++) {
