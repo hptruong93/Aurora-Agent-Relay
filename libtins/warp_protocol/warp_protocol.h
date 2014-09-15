@@ -140,7 +140,7 @@ namespace Tins {
         }
 
     private:
-        uint8_t* buffer;
+        uint8_t buffer[2048];
         uint32_t size;
     };
     

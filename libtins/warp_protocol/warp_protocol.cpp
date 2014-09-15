@@ -161,7 +161,7 @@ namespace Tins {
     *********************************************************************************************************/
 
     WARP_protocol::WARP_protocol(const uint8_t *data, uint32_t total_sz) {
-        buffer = (uint8_t*) std::malloc(total_sz * 0 + 2048);
+        // buffer = (uint8_t*) std::malloc(total_sz * 0 + 2048);
         //buffer = new uint8_t[total_sz];
         size = total_sz;
         for (uint32_t i = 0; i < total_sz; i++) {
@@ -173,7 +173,7 @@ namespace Tins {
     }
 
     void WARP_protocol::free_buffer() {
-        free(buffer);
+        // free(buffer);
     }
 
     //Serialize entire packet (only assert if running in debug mode)

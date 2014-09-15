@@ -107,12 +107,7 @@ void packet_receive(uint8_t* packet_buffer, uint32_t data_length, receive_result
     uint8_t fragment_number = packet_buffer[FRAGMENT_NUMBER_INDEX];
     uint8_t total_number_fragment = packet_buffer[FRAGMENT_TOTAL_NUMBER_INDEX];
     uint16_t byte_offset = ((uint16_t)(packet_buffer[FRAGMENT_BYTE_OFFSET_MSB] << 8)) + (packet_buffer[FRAGMENT_BYTE_OFFSET_LSB]);
-    WARP_protocol::WARP_fragment_struct* fragment_info = (WARP_protocol::WARP_fragment_struct*) std::malloc(sizeof(WARP_protocol::WARP_fragment_struct));
-
-    fragment_info->id = id;
-    fragment_info->fragment_number = fragment_number;
-    fragment_info->total_number_fragment = total_number_fragment;
-    fragment_info->byte_offset = (uint16_t) byte_offset;
+    WARP_protocol::WARP_fragment_struct* fragment_info = create_info(id, fragment_number, byte_offset, total_number_fragment);
 
     dl_list* wrap_around = (dl_list*) std::malloc(sizeof(dl_list));
     wrap_around->data_addr = packet_buffer + FRAGMENT_INFO_LENGTH;
@@ -179,7 +174,6 @@ void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, dl_list* new
                     //Pugre the entry
                     update_database(found, NULL, NULL);
                     free(previous_info);
-                    free(previous_queue);
                 } else {//Still waiting for fragments
                     //Throw out the old buffer
                     assemble_result(WAITING_FOR_FRAGMENT, previous_data_buffer, NULL, result);
@@ -190,6 +184,7 @@ void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, dl_list* new
                     //Update database
                     update_database(found, new_info, new_queue);
                 }
+                free(previous_queue);
             } else if (new_info->fragment_number > previous_info->fragment_number) {
                 //Copy to old buffer
                 uint16_t relative_offset = new_info->byte_offset - previous_info->byte_offset;
@@ -207,7 +202,6 @@ void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, dl_list* new
                     //Pugre the entry
                     update_database(found, NULL, NULL);
                     free(new_info);
-                    free(new_queue);
                 } else {
                     //Throw out the new buffer
                     assemble_result(WAITING_FOR_FRAGMENT, new_data_buffer, NULL, result);
@@ -218,6 +212,8 @@ void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, dl_list* new
                     //Update database
                     //Nothing to do here since we are still using the old info
                 }
+
+                free(new_queue);
             } else {//Duplicated packet???
                 //Drop
                 assemble_result(WAITING_FOR_FRAGMENT, NULL, NULL, result);
