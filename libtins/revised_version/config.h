@@ -3,6 +3,10 @@
 
 #include "tins/tins.h"
 
+#define GREP_FROM_IFCONFIG			"ifconfig | grep -E "
+#define HW_ADDR_KEYWORD				"HWaddr "
+
+
 namespace Config {
     extern const uint16_t MAX_ETHERNET_LENGTH; //Actually 1500 but reserve 25 bytes for future development
 

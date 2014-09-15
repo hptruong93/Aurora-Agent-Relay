@@ -41,6 +41,29 @@ string PDUTypeToString(int PDUTypeFlag) {
         return definitions[PDUTypeFlag];
 }
 
+char* getInterface(Dot11::address_type addr) {
+    string address = addr.to_string();
+    FILE *fp;
+    char *interface_name = (char*)malloc(64);
+    size_t interface_name_len = 0;
+    int c;
+    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
+    fp = popen(command.c_str(), "r");
+
+    while ((c = fgetc(fp)) != EOF)
+    {
+        if ((char) c == ' ')
+        {
+            break;
+        }
+        interface_name[interface_name_len++] = (char)c;
+    }
+
+    interface_name[interface_name_len] = '\0';
+
+    return interface_name;
+}
+
 bool process(PDU &pkt) {
     EthernetII &ethernet_packet = pkt.rfind_pdu<EthernetII>();
     
@@ -66,9 +89,19 @@ bool process(PDU &pkt) {
                 RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                 RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
 
-                sender->default_interface(mon_interface);
-                sender->send(to_send);
-                cout << "Sent 1 packet to " << mon_interface << endl;
+                char* interface_name = getInterface(dot11.addr1());
+
+                if (strlen(interface_name) > 0) {
+                    sender->default_interface(interface_name);
+                    sender->send(to_send);
+                    cout << "Sent 1 packet to " << interface_name << endl;
+                } else {
+                    cout << "ERROR: no interface found for the destination hardware address: " 
+                            << dot11.addr1().to_string() << endl;
+                }
+
+                free(interface_name);
+
             } else if (type == Dot11::DATA) {
                 if (data_length <= 46) {//Magic?? 32 is the length of 802.11 header. 46 is min length of ethernet payload
                     //Padd with 0???
@@ -85,9 +118,19 @@ bool process(PDU &pkt) {
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(warp_layer_buffer, data_length);
 
-                    sender->default_interface(mon_interface);
-                    sender->send(to_send);
-                    cout << "Sent 1 packet to " << mon_interface << endl;
+                    char* interface_name = getInterface(data_frame.addr3());
+
+                    if (strlen(interface_name) > 0) {
+                        sender->default_interface(interface_name);
+                        sender->send(to_send);
+                        cout << "Sent 1 packet to " << interface_name << endl;
+                    } else {
+                        cout << "ERROR: no interface found for the destination hardware address: " 
+                                << data_frame.addr3().to_string() << endl;
+                    }
+
+                    free(interface_name);
+
                 } else {
                     try {
                         SNAP snap = data_frame.rfind_pdu<SNAP>();
@@ -97,10 +140,18 @@ bool process(PDU &pkt) {
                         to_send = to_send / (*(snap.inner_pdu()));
                         to_send.payload_type(snap.eth_type());
 
-                        sender->default_interface(wlan_interface);
+                        char* interface_name = getInterface(data_frame.addr3());
 
-                        sender->send(to_send);
-                        cout << "Sent 1 packet to " << wlan_interface << endl;
+                        if (strlen(interface_name) > 0) {
+                            sender->default_interface(interface_name);
+                            sender->send(to_send);
+                            cout << "Sent 1 packet to " << interface_name << endl;
+                        } else {
+                            cout << "ERROR: no interface found for the destination hardware address: " 
+                                    << data_frame.addr3().to_string() << endl;
+                        }
+
+                        free(interface_name);
                     } catch (exception& e) {
                         cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                     }
