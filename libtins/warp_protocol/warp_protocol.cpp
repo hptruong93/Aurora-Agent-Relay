@@ -160,14 +160,15 @@ namespace Tins {
                                         End of static methods
     *********************************************************************************************************/
 
-    WARP_protocol::WARP_protocol(const uint8_t *data, uint32_t total_sz) {
-        // buffer = (uint8_t*) std::malloc(total_sz * 0 + 2048);
-        //buffer = new uint8_t[total_sz];
-        size = total_sz;
-        for (uint32_t i = 0; i < total_sz; i++) {
-            buffer[i] = data[i];
-        }
-    }
+    // WARP_protocol::WARP_protocol(const uint8_t *data, uint32_t total_sz) {
+    //     // buffer = (uint8_t*) std::malloc(total_sz * 0 + 2048);
+    //     //buffer = new uint8_t[total_sz];
+    //     size = total_sz;
+    //     for (uint32_t i = 0; i < total_sz; i++) {
+    //         buffer[i] = data[i];
+    //     }
+    // }
+    WARP_protocol::WARP_protocol(const uint8_t* data, uint32_t sz) : buffer(data, data + sz) { }
     
     WARP_protocol::~WARP_protocol() {
     }
@@ -177,15 +178,19 @@ namespace Tins {
     }
 
     //Serialize entire packet (only assert if running in debug mode)
-    void WARP_protocol::write_serialization(uint8_t *data, uint32_t total_sz, const PDU *parent) {
-#ifdef TINS_DEBUG
-        assert(total_sz >= header_size());
-#endif
-        //std::copy(buffer.begin(), buffer.end(), data);
-        if (total_sz > header_size()) {
-            memmove(data, buffer, header_size());
-        } else {
-            memmove(data, buffer, total_sz);
-        }
+//     void WARP_protocol::write_serialization(uint8_t *data, uint32_t total_sz, const PDU *parent) {
+// #ifdef TINS_DEBUG
+//         assert(total_sz >= header_size());
+// #endif
+//         //std::copy(buffer.begin(), buffer.end(), data);
+//         if (total_sz > header_size()) {
+//             memmove(data, buffer, header_size());
+//         } else {
+//             memmove(data, buffer, total_sz);
+//         }
+//     }
+
+    void WARP_protocol::write_serialization(uint8_t *data, uint32_t sz, const PDU *parent) { 
+        std::copy(buffer.begin(), buffer.end(), data);
     }
 }

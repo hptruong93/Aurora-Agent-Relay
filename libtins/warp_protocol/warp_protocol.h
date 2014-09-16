@@ -128,7 +128,8 @@ namespace Tins {
         PDUType pdu_type() const { return pdu_flag; }
         
         //Returns Header Size (Getter)
-        uint32_t header_size() const { return size; }
+        // uint32_t header_size() const { return size; }
+        uint32_t header_size() const { return buffer.size(); }
         
         //Clones the PDU. This method is used when copying PDUs.
         WARP_protocol *clone() const { return new WARP_protocol(*this); }
@@ -136,11 +137,13 @@ namespace Tins {
         void write_serialization(uint8_t *data, uint32_t total_sz, const PDU *parent);
     
         uint8_t* get_buffer() {
-            return buffer;
+            // return buffer;
+            return &(buffer[0]);
         }
 
     private:
-        uint8_t buffer[2048];
+        // uint8_t buffer[2048];
+        std::vector<uint8_t> buffer;
         uint32_t size;
     };
     

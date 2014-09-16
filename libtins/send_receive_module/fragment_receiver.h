@@ -20,6 +20,10 @@ typedef struct {
     Tins::WARP_protocol::WARP_fragment_struct* info_address;
 } receive_result;
 
+void initialize_receiver();
+
 //The buffer will starts with fragment info. WARP should not distinguish between management and data packets
 void packet_receive(uint8_t* packet_buffer, uint32_t data_length, receive_result* result);
+
+void free_receive_result(receive_result* to_free);
 #endif
