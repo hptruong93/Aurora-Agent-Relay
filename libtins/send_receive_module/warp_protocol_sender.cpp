@@ -111,7 +111,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
                 this->sender->send(sending);
                 warp_layer->free_buffer();
-                free(warp_layer);
+                delete warp_layer;
             }
         } else {//Send in one fragment
             // printf("Total split %d\n", total_number_fragment);
@@ -130,7 +130,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
         }
 
         init_warp_layer->free_buffer();
-        free(init_warp_layer);
+        delete init_warp_layer;
         free(fragment_info);
     } else if (type == TYPE_CONTROL) {
         //The packet passed in with the input is the control packet. Append this to the ethernet header and send

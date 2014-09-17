@@ -86,7 +86,7 @@ namespace Tins {
         uint8_t buffer_length;
 
         buffer_length = 2 + 10 + 5;
-        buffer = (uint8_t*) std::malloc(buffer_length);
+        buffer = (uint8_t*) std::malloc(buffer_length * sizeof(uint8_t));
 
         //Header
         buffer[TYPE_INDEX] = 0x01;
@@ -121,7 +121,7 @@ namespace Tins {
         uint8_t* buffer;
         uint8_t buffer_length = WARP_PROTOCOL_HEADER_LENGTH + MAC_CONTROL_ELEMENT_LENGTH;
         
-        buffer = (uint8_t*) std::malloc(buffer_length);
+        buffer = (uint8_t*) std::malloc(buffer_length * sizeof(uint8_t));
 
         //Header
         buffer[TYPE_INDEX] = TYPE_CONTROL;
@@ -131,7 +131,10 @@ namespace Tins {
         buffer[2] = info->operation_code;
         memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0]), 6);
 
-        return new WARP_protocol(buffer, buffer_length);
+        WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
+        std::free(buffer);
+
+        return output;
     }
 
     WARP_protocol* WARP_protocol::create_transmission_control(WARP_transmission_control_struct* info) {
@@ -139,7 +142,7 @@ namespace Tins {
         uint8_t buffer_length;
 
         buffer_length = WARP_PROTOCOL_HEADER_LENGTH + TRANSMISSION_CONTROL_ELEMENT_LENGTH;
-        buffer = (uint8_t*) std::malloc(buffer_length);
+        buffer = (uint8_t*) std::malloc(buffer_length * sizeof(uint8_t));
 
         //Header
         buffer[TYPE_INDEX] = TYPE_CONTROL;
@@ -153,7 +156,10 @@ namespace Tins {
         buffer[RATE_INDEX] = info->rate;
         buffer[HW_MODE_INDEX] = info->hw_mode;
 
-        return new WARP_protocol(buffer, buffer_length);
+        WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
+        std::free(buffer);
+
+        return output;
     }
 
     /*********************************************************************************************************
