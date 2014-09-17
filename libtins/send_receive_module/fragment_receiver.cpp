@@ -9,7 +9,7 @@
 
 // the number of spaces in the below arrays for info and data
 #define PACKET_SPACES                    20
-  
+
 
 using namespace Tins;
 
