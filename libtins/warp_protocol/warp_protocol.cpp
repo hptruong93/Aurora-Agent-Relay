@@ -179,23 +179,7 @@ namespace Tins {
     WARP_protocol::~WARP_protocol() {
     }
 
-    void WARP_protocol::free_buffer() {
-        // free(buffer);
-    }
-
     //Serialize entire packet (only assert if running in debug mode)
-//     void WARP_protocol::write_serialization(uint8_t *data, uint32_t total_sz, const PDU *parent) {
-// #ifdef TINS_DEBUG
-//         assert(total_sz >= header_size());
-// #endif
-//         //std::copy(buffer.begin(), buffer.end(), data);
-//         if (total_sz > header_size()) {
-//             memmove(data, buffer, header_size());
-//         } else {
-//             memmove(data, buffer, total_sz);
-//         }
-//     }
-
     void WARP_protocol::write_serialization(uint8_t *data, uint32_t sz, const PDU *parent) { 
         std::copy(buffer.begin(), buffer.end(), data);
     }
