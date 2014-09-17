@@ -21,8 +21,10 @@ class WARP_ProtocolSender
         void send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info = NULL);
         void set_sender(PacketSender* new_sender);
         PacketSender* get_sender();
+
+        static int fragment_id = 0;
     private:
-        PacketSender* sender;
+        unique_ptr<PacketSender> sender;
 };
 
 #endif

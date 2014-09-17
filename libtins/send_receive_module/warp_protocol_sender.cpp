@@ -18,12 +18,14 @@ using namespace std;
 using namespace Tins;
 using namespace Config;
 
-WARP_ProtocolSender::WARP_ProtocolSender(PacketSender* init_sender) : sender(init_sender)
+WARP_ProtocolSender::WARP_ProtocolSender(PacketSender* init_sender)
 {
+    this->sender.reset(init_sender);
 }
 
 WARP_ProtocolSender::~WARP_ProtocolSender()
 {
+    this->sender.reset();
 }
 
 void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info)
@@ -143,12 +145,12 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
 void WARP_ProtocolSender::set_sender(PacketSender* new_sender)
 {
-    this->sender = new_sender;
+    this->sender.reset(new_sender);
 }
 
 PacketSender* WARP_ProtocolSender::get_sender()
 {
-    return this->sender;
+    return this->sender.get();
 }
 
 // For testing
