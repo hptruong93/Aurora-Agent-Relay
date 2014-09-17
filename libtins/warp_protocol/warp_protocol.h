@@ -98,6 +98,8 @@ namespace Tins {
             uint8_t rate;
             uint8_t hw_mode;
         };
+
+        static uint16_t fragment_id = 0;
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 

@@ -64,14 +64,14 @@ namespace Tins {
     }
 
     WARP_protocol::WARP_fragment_struct* WARP_protocol::generate_fragment_struct() {
-        static uint8_t id_counter = 0;
+        // static uint8_t id_counter = 0;
 
         WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(1, sizeof(WARP_fragment_struct));
 
-        output->id = id_counter;
-        id_counter++;
-        if (id_counter == RESERVED_FRAGMENT_ID) {
-            id_counter = 0;
+        output->id = WARP_protocol::fragment_id;
+        WARP_protocol::fragment_id++;
+        if (WARP_protocol::fragment_id == RESERVED_FRAGMENT_ID) {
+            WARP_protocol::fragment_id = 0;
         }
 
         output->fragment_number = 1;
