@@ -101,22 +101,14 @@ void run(int argc, char *argv[]) override
         cout << "Init pc to warp from hwsim0 to eth0" << endl;
     }
     
-    this->sniff(in_interface);
+    this->sniff();
 }
 
 // Static methods
 
-std::string MonToWarpAgent::PDU_Type_To_String(int type)
-{
-    if(PDUTypeFlag == 1000)
-        return std::string("USER_DEFINED_PDU");
-    else
-        return MonToWarpAgent::_DEFINITIONS[PDUTypeFlag];
-}
-
 bool MonToWarpAgent::Is_Management_Frame(int type)
 {
-    string converted = MonToWarpAgent::PDUTypeToString(type);
+    string converted = RelayAgent::PDUTypeToString(type);
     if (converted == "DOT11" ||
         converted == "DOT11_BEACON" ||
         converted == "DOT11_PROBE_REQ" ||
