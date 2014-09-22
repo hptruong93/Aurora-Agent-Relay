@@ -9,13 +9,14 @@
 
 #include "relay_agent.h"
 
-class WarpToWlanAgent : public RelayAgent {
-    public:
-        WarpToWlanAgent(PacketSender* init_packet_sender);
-        bool process(PDU &pkt) override;
-        void run(int argc, char *argv[]) override;
-    protected:
-        static char* get_interface_name(Dot11::address_type addr);
-};
+namespace RelayAgents {
+    class WarpToWlanAgent : public RelayAgent {
+        public:
+            WarpToWlanAgent(PacketSender* init_packet_sender);
+            bool process(PDU &pkt) override;
+            void run(int argc, char *argv[]) override;
+            static char* get_interface_name(Dot11::address_type addr);
+    };   
+}
 
 #endif

@@ -9,11 +9,13 @@
 
 #include "relay_agent.h"
 
-class WlanToWarpAgent : public RelayAgent {
-    public:
-        WlanToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
-        bool process(PDU &pkt) override;
-        void run(int argc, char *argv[]) override;
-};
+namespace RelayAgents {
+    class WlanToWarpAgent : public RelayAgent {
+        public:
+            WlanToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
+            bool process(PDU &pkt) override;
+            void run(int argc, char *argv[]) override;
+    };
+}
 
 #endif

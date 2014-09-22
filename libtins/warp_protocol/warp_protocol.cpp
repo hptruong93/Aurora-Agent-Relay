@@ -68,10 +68,10 @@ namespace Tins {
 
         WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(1, sizeof(WARP_fragment_struct));
 
-        output->id = WARP_protocol::fragment_id;
-        WARP_protocol::fragment_id++;
-        if (WARP_protocol::fragment_id == RESERVED_FRAGMENT_ID) {
-            WARP_protocol::fragment_id = 0;
+        output->id = Tins::Fragment_Id;
+        Tins::Fragment_Id++;
+        if (Tins::Fragment_Id == RESERVED_FRAGMENT_ID) {
+            Tins::Fragment_Id = 0;
         }
 
         output->fragment_number = 1;

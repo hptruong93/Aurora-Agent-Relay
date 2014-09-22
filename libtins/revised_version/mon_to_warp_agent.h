@@ -6,17 +6,23 @@
 
 #include "relay_agent.h"
 
+using namespace Tins;
+using namespace Config;
+using namespace std;
+
 #ifndef MON_TO_WARP_AGENT_H_
 #define MON_TO_WARP_AGENT_H_
 
-class MonToWarpAgent: public RelayAgent {
-    public:
-        MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
-        bool process(PDU &pkt) override;
-        void run(int argc, char *argv[]) override;
+namespace RelayAgents {
+    class MonToWarpAgent: public RelayAgent {
+        public:
+            MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
+            bool process(PDU &pkt) override;
+            void run(int argc, char *argv[]) override;
 
-        // Static methods and constants
-        static bool Is_Management_Frame(int type);
-};
+            // Static methods and constants
+            static bool Is_Management_Frame(int type);
+    };
+}
 
 #endif

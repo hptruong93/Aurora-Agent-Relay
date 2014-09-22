@@ -1,7 +1,10 @@
 CC = g++
 COMMON_FLAGS = -g -O3 -lpthread -ltins -lpcap -std=c++0x
+COMMON_FLAGS_NEW = -g -O3 -lpthread -ltins -lpcap -std=c++11
 CFLAGS = $(COMMON_FLAGS) -c
 LFLAGS = $(COMMON_FLAGS) -Wall
+CFLAGS_NEW = $(COMMON_FLAGS_NEW) -c
+LFALGS_NEW = $(COMMON_FLAGS_NEW) -Wall
 
 WARP_PROTOCOL_DIR = ../warp_protocol/
 INC_WARP_PROTOCOL = -I$(WARP_PROTOCOL_DIR)
@@ -11,7 +14,7 @@ INC_SEND_MODULE = -I$(SEND_RECEIVE_MODULE_DIR)
 
 ###########################################################################################################
 
-all : mon_to_warp wlan_to_warp warp_to_wlan
+all : mon_to_warp wlan_to_warp warp_to_wlan agents
 
 ###################################Linking files together##################################################
 
@@ -24,6 +27,9 @@ wlan_to_warp : util.o config.o warp_protocol.o  warp_protocol_sender.o wlan_to_w
 warp_to_wlan : util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o
 	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
 
+agents : agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o
+	$(CC) agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o $(LFALGS_NEW) -o agents.out
+
 ###################################Compiling main files####################################################
 
 wlan_to_warp.o : wlan_to_warp.cpp
@@ -34,6 +40,21 @@ mon_to_warp.o : mon_to_warp.cpp
 
 warp_to_wlan.o : warp_to_wlan.cpp
 	$(CC) warp_to_wlan.cpp $(CFLAGS) -o warp_to_wlan.o
+
+wlan_to_warp_agent.o : wlan_to_warp_agent.cpp
+	$(CC) wlan_to_warp_agent.cpp $(CFLAGS_NEW) -o wlan_to_warp_agent.o
+
+mon_to_warp_agent.o : mon_to_warp_agent.cpp
+	$(CC) mon_to_warp_agent.cpp $(CFLAGS_NEW) -o mon_to_warp_agent.o
+
+warp_to_wlan_agent.o : warp_to_wlan_agent.cpp
+	$(CC) warp_to_wlan_agent.cpp $(CFLAGS_NEW) -o warp_to_wlan_agent.o
+
+relay_agent.o : relay_agent.cpp
+	$(CC) relay_agent.cpp $(CFLAGS_NEW) -o relay_agent.o
+
+agents.o : agents.cpp
+	$(CC) agents.cpp $(CFLAGS_NEW) -o agents.o
 
 ##################################Files to link later######################################################
 

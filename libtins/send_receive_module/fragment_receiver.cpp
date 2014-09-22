@@ -190,7 +190,7 @@ void fragment_arrive(WARP_protocol::WARP_fragment_struct* new_info, uint8_t* new
 Test program below. Ignore when integrated
 */
 
-int maain(void) {
+int maaain(void) {
     
     receive_result fragResults;
     

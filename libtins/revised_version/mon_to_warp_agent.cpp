@@ -3,15 +3,31 @@
 * Date: 2014/09/17
 * Author: Alan Yang
 */
+#include "mon_to_warp_agent.h"
 
+#include <stdio.h>
+#include <string>
+#include <exception>
+
+#include "config.h"
+#include "util.h"
+#include <tins/tins.h>
+#include "../send_receive_module/warp_protocol_sender.h"
+#include "../send_receive_module/fragment_receiver.h"
+#include "../warp_protocol/warp_protocol.h"
+
+using namespace Tins;
+using namespace Config;
 using namespace std;
 
-MonToWarpAgent::MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : RelayAgent(WARP_ProtocolSender* init_protocol_sender)
+using namespace RelayAgents;
+
+MonToWarpAgent::MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : RelayAgent(init_protocol_sender)
 {
 
 }
 
-bool MonToWarpAgent::process(PDU &pkt) override
+bool MonToWarpAgent::process(PDU &pkt)
 {
     if (pkt.pdu_type() == pkt.RADIOTAP) {
     
@@ -54,7 +70,7 @@ bool MonToWarpAgent::process(PDU &pkt) override
                 cout << "Sent 1 data packet" << endl;
             }
         } else {//802.11 Control packets
-            cout << "Control packet: Inner Layer is " << PDUTypeToString(pkt.inner_pdu()->pdu_type()) << endl;
+            cout << "Control packet: Inner Layer is " << RelayAgent::PDU_Type_To_String(pkt.inner_pdu()->pdu_type()) << endl;
 
             Dot11Control &controlPacket = innerPkt->rfind_pdu<Dot11Control>();
             Dot11::address_type dest = controlPacket.addr1();
@@ -84,7 +100,7 @@ bool MonToWarpAgent::process(PDU &pkt) override
     return true;
 }
 
-void run(int argc, char *argv[]) override
+void MonToWarpAgent::run(int argc, char *argv[])
 {
     if (argc >= 3) {
         this->set_in_interface(argv[1]);
@@ -108,7 +124,7 @@ void run(int argc, char *argv[]) override
 
 bool MonToWarpAgent::Is_Management_Frame(int type)
 {
-    string converted = RelayAgent::PDUTypeToString(type);
+    string converted = RelayAgent::PDU_Type_To_String(type);
     if (converted == "DOT11" ||
         converted == "DOT11_BEACON" ||
         converted == "DOT11_PROBE_REQ" ||

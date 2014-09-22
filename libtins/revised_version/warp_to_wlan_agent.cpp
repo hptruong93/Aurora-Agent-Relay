@@ -6,14 +6,29 @@
 
 #include "warp_to_wlan_agent.h"
 
+#include <stdio.h>
+#include <string>
+#include <exception>
+
+#include "config.h"
+#include "util.h"
+#include <tins/tins.h>
+#include "../send_receive_module/warp_protocol_sender.h"
+#include "../send_receive_module/fragment_receiver.h"
+#include "../warp_protocol/warp_protocol.h"
+
+using namespace Tins;
+using namespace Config;
 using namespace std;
+
+using namespace RelayAgents;
 
 WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(init_packet_sender)
 {
 
 }
 
-bool WarpToWlanAgent::process(PDU &pkt) override
+bool WarpToWlanAgent::process(PDU &pkt)
 {
     EthernetII &ethernet_packet = pkt.rfind_pdu<EthernetII>();
     
@@ -41,9 +56,9 @@ bool WarpToWlanAgent::process(PDU &pkt) override
                 // char* interface_name = WarpToWlanAgent::get_interface_name(management_frame.addr3());
 
                 // if (strlen(interface_name) > 0) {
-                    this->pacet_sender->default_interface(mon_interface);
-                    this->pacet_sender->send(to_send);
-                    cout << "Sent 1 packet to " << mon_interface << endl;
+                    this->packet_sender->default_interface("hwsim0");
+                    this->packet_sender->send(to_send);
+                    cout << "Sent 1 packet to " << "hwsim0" << endl;
                 // } else {
                 //     cout << "ERROR: no interface found for the destination hardware address: " 
                 //             << dot11.addr1().to_string() << endl;
@@ -71,8 +86,8 @@ bool WarpToWlanAgent::process(PDU &pkt) override
                     char* interface_name = WarpToWlanAgent::get_interface_name(data_frame.addr1());
 
                     if (strlen(interface_name) > 0) {
-                        this->pacet_sender->default_interface(interface_name);
-                        this->pacet_sender->send(to_send);
+                        this->packet_sender->default_interface(interface_name);
+                        this->packet_sender->send(to_send);
                         cout << "Sent 1 packet to " << interface_name << endl;
                     } else {
                         cout << "ERROR: no interface found for the destination hardware address: " 
@@ -93,8 +108,8 @@ bool WarpToWlanAgent::process(PDU &pkt) override
                         char* interface_name = WarpToWlanAgent::get_interface_name(data_frame.addr1());
 
                         if (strlen(interface_name) > 0) {
-                            this->pacet_sender->default_interface(interface_name);
-                            this->pacet_sender->send(to_send);
+                            this->packet_sender->default_interface(interface_name);
+                            this->packet_sender->send(to_send);
                             cout << "Sent 1 packet to " << interface_name << endl;
                         } else {
                             cout << "ERROR: no interface found for the destination hardware address: " 
@@ -103,7 +118,7 @@ bool WarpToWlanAgent::process(PDU &pkt) override
 
                         free(interface_name);
                     } catch (exception& e) {
-                        cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
+                        cout << "Snap not found. Not raw either. Payload is of type " << RelayAgent::PDU_Type_To_String(data_frame.inner_pdu()->pdu_type()) << endl;
                     }
                 }
             } else if (type == Dot11::CONTROL) {
@@ -118,7 +133,7 @@ bool WarpToWlanAgent::process(PDU &pkt) override
     return true;
 }
 
-void WarpToWlanAgent::run(int argc, char *argv[]) override
+void WarpToWlanAgent::run(int argc, char *argv[])
 {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
     
@@ -150,4 +165,32 @@ void WarpToWlanAgent::run(int argc, char *argv[]) override
 
     initialize_receiver();
     this->sniff();
+}
+
+// Static
+
+char* WarpToWlanAgent::get_interface_name(Dot11::address_type addr)
+{
+    string address = addr.to_string();
+    cout << "Address is " << address << endl;
+
+    FILE *fp;
+    char *interface_name = (char*)malloc(64);
+    size_t interface_name_len = 0;
+    int c;
+    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
+    fp = popen(command.c_str(), "r");
+
+    while ((c = fgetc(fp)) != EOF)
+    {
+        if ((char) c == ' ')
+        {
+            break;
+        }
+        interface_name[interface_name_len++] = (char)c;
+    }
+
+    interface_name[interface_name_len] = '\0';
+
+    return interface_name;
 }

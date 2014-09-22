@@ -6,12 +6,29 @@
 
 #include "wlan_to_warp_agent.h"
 
+#include <stdio.h>
+#include <string>
+#include <exception>
+
+#include "config.h"
+#include "util.h"
+#include <tins/tins.h>
+#include "../send_receive_module/warp_protocol_sender.h"
+#include "../send_receive_module/fragment_receiver.h"
+#include "../warp_protocol/warp_protocol.h"
+
+using namespace Tins;
+using namespace Config;
+using namespace std;
+
+using namespace RelayAgents;
+
 WlanToWarpAgent::WlanToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : RelayAgent(init_protocol_sender)
 {
 
 }
 
-bool WlanToWarpAgent::process(PDU &pkt) override
+bool WlanToWarpAgent::process(PDU &pkt)
 {
     if (pkt.pdu_type() == pkt.ETHERNET_II || pkt.pdu_type() == pkt.IEEE802_3) {
         //For now forward everything
@@ -36,7 +53,7 @@ bool WlanToWarpAgent::process(PDU &pkt) override
     return true;
 }
 
-void WlanToWarpAgent(int argc, char *argv[]) override
+void WlanToWarpAgent::run(int argc, char *argv[])
 {
     if (argc >= 3) {
         this->set_in_interface(argv[1]);
