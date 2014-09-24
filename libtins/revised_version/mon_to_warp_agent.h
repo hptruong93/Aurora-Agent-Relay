@@ -18,8 +18,8 @@ namespace RelayAgents {
         public:
         	MonToWarpAgent();
             MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
-            bool process(PDU &pkt) override;
-            void run(int argc, char *argv[]) override;
+            bool process(PDU &pkt);
+            void run(int argc, char *argv[]);
 
             // Static methods and constants
             static bool Is_Management_Frame(int type);
