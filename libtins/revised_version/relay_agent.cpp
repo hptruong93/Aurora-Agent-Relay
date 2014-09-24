@@ -21,20 +21,17 @@ using namespace RelayAgents;
 
 RelayAgent::RelayAgent()
 {
-    this->packet_sender = nullptr;
-    this->protocol_sender = nullptr;
-    this->in_interface = std::unique_ptr<std::string>(new std::string(""));
-    this->out_interface = std::unique_ptr<std::string>(new std::string(""));
+    this->init(NULL, NULL);
 }
 
-RelayAgent::RelayAgent(WARP_ProtocolSender* init_protocol_sender) : RelayAgent()
+RelayAgent::RelayAgent(WARP_ProtocolSender* init_protocol_sender)
 {
-    this->protocol_sender = std::unique_ptr<WARP_ProtocolSender>(init_protocol_sender);
+    this->init(init_protocol_sender, NULL);
 }
 
-RelayAgent::RelayAgent(PacketSender* init_packer_sender) : RelayAgent()
+RelayAgent::RelayAgent(PacketSender* init_packet_sender)
 {
-    this->packet_sender = std::unique_ptr<PacketSender>(init_packer_sender);
+    this->init(NULL, init_packet_sender);
 }
 
 RelayAgent::~RelayAgent()
@@ -43,6 +40,22 @@ RelayAgent::~RelayAgent()
     this->packet_sender.reset();
     this->in_interface.reset();
     this->out_interface.reset();
+}
+
+void RelayAgent::init(WARP_ProtocolSender* init_protocol_sender, PacketSender* init_packet_sender)
+{
+    this->packet_sender = nullptr;
+    this->protocol_sender = nullptr;
+    this->in_interface = std::unique_ptr<std::string>(new std::string(""));
+    this->out_interface = std::unique_ptr<std::string>(new std::string(""));
+
+    if (init_protocol_sender != NULL) {
+        this->protocol_sender.reset(init_protocol_sender);
+    }
+
+    if (init_packet_sender != NULL) {
+        this->packet_sender.reset(init_packet_sender);
+    }
 }
 
 void RelayAgent::sniff()

@@ -57,6 +57,8 @@ namespace RelayAgents {
             std::unique_ptr<PacketSender> packet_sender;
             std::unique_ptr<std::string> in_interface;
             std::unique_ptr<std::string> out_interface;
+        private:
+            void init(WARP_ProtocolSender* init_protocol_sender, PacketSender* init_packet_sender);
     };
 }
 

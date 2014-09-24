@@ -24,8 +24,8 @@ wlan_to_warp : util.o config.o warp_protocol.o  warp_protocol_sender.o wlan_to_w
 warp_to_wlan : util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o
 	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
 
-agents : agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o
-	$(CC) agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o $(LFALGS) -o agents.out
+agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o agents.o
+	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o agents.o $(LFLAGS) -o agents.out
 
 ###################################Compiling main files####################################################
 
