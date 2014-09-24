@@ -1,5 +1,6 @@
 CC = g++
-COMMON_FLAGS = -g -O3 -lpthread -ltins -lpcap -std=c++0x
+# -pthread can be removed when c++11 is used
+COMMON_FLAGS = -g -O3 -pthread -ltins -lpcap -std=c++0x
 CFLAGS = $(COMMON_FLAGS) -c
 LFLAGS = $(COMMON_FLAGS) -Wall
 
