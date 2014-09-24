@@ -12,6 +12,7 @@
 namespace RelayAgents {
     class WarpToWlanAgent : public RelayAgent {
         public:
+        	WarpToWlanAgent();
             WarpToWlanAgent(PacketSender* init_packet_sender);
             bool process(PDU &pkt) override;
             void run(int argc, char *argv[]) override;

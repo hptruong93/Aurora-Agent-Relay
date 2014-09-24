@@ -22,6 +22,11 @@ using namespace std;
 
 using namespace RelayAgents;
 
+MonToWarpAgent::MonToWarpAgent() : RelayAgent()
+{
+
+}
+
 MonToWarpAgent::MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : RelayAgent(init_protocol_sender)
 {
 

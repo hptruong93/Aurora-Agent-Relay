@@ -16,6 +16,7 @@ using namespace std;
 namespace RelayAgents {
     class MonToWarpAgent: public RelayAgent {
         public:
+        	MonToWarpAgent();
             MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
             bool process(PDU &pkt) override;
             void run(int argc, char *argv[]) override;

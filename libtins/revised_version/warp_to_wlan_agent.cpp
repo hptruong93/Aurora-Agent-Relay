@@ -23,6 +23,11 @@ using namespace std;
 
 using namespace RelayAgents;
 
+WarpToWlanAgent::WarpToWlanAgent() : RelayAgent()
+{
+    
+}
+
 WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(init_packet_sender)
 {
 

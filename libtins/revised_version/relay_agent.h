@@ -40,10 +40,6 @@ namespace RelayAgents {
 
     class RelayAgent {
         public:
-            RelayAgent();
-            RelayAgent(WARP_ProtocolSender* init_protocol_sender);
-            RelayAgent(PacketSender* init_packet_sender);
-            ~RelayAgent();
             WARP_ProtocolSender* getSender() const;
             virtual void sniff();
             virtual void set_in_interface(const char* set_in_interface);
@@ -53,6 +49,10 @@ namespace RelayAgents {
             // static
             static std::string PDU_Type_To_String(int PDUTypeFlag);
         protected:
+            RelayAgent();
+            RelayAgent(WARP_ProtocolSender* init_protocol_sender);
+            RelayAgent(PacketSender* init_packet_sender);
+            ~RelayAgent();
             std::unique_ptr<WARP_ProtocolSender> protocol_sender;
             std::unique_ptr<PacketSender> packet_sender;
             std::unique_ptr<std::string> in_interface;

@@ -5,7 +5,11 @@
 
 #include <iostream>
 
-int main(int argc, char **argv)
+using namespace RelayAgents;
+
+int main(int argc, char *argv[])
 {
-	return 0;
+	// Test
+	WlanToWarpAgent test_wtp_agent;
+	test_wtp_agent.run(argc, argv);
 }
