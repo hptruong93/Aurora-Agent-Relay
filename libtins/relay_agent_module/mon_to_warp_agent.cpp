@@ -34,6 +34,8 @@ MonToWarpAgent::MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : Rela
 
 bool MonToWarpAgent::process(PDU &pkt)
 {
+    WARP_ProtocolSender* protocol_sender = this->protocol_sender.get();
+
     if (pkt.pdu_type() == pkt.RADIOTAP) {
     
         //Start processing of RadioTap Packets
@@ -51,7 +53,7 @@ bool MonToWarpAgent::process(PDU &pkt)
                 transmit_info->payload_size = (uint16_t) management_frame.size();
 
                 //-----------------> Using fragment sender to send
-                this->protocol_sender->send(management_frame, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, transmit_info);
+                protocol_sender->send(management_frame, TYPE_TRANSMIT, SUBTYPE_MANGEMENT_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -68,7 +70,7 @@ bool MonToWarpAgent::process(PDU &pkt)
                 transmit_info->payload_size = (uint16_t) dataPkt.size();
 
                 //-----------------> Using fragment sender to send
-                this->protocol_sender->send(dataPkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+                protocol_sender->send(dataPkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);
@@ -90,7 +92,7 @@ bool MonToWarpAgent::process(PDU &pkt)
                 transmit_info->payload_size = (uint16_t) controlPacket.size();
 
                 //-----------------> Create WARP layer and append at the end
-                this->protocol_sender->send(controlPacket, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+                protocol_sender->send(controlPacket, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
                 //-----------------> Clean up
                 free(transmit_info);

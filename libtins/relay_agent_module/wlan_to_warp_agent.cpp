@@ -10,8 +10,8 @@
 #include <string>
 #include <exception>
 
-#include "config.h"
-#include "util.h"
+#include "../revised_version/config.h"
+#include "../revised_version/util.h"
 #include <tins/tins.h>
 #include "../send_receive_module/warp_protocol_sender.h"
 #include "../send_receive_module/fragment_receiver.h"
@@ -35,6 +35,8 @@ WlanToWarpAgent::WlanToWarpAgent(WARP_ProtocolSender* init_protocol_sender) : Re
 
 bool WlanToWarpAgent::process(PDU &pkt)
 {
+    WARP_ProtocolSender* protocol_sender = this->protocol_sender.get();
+
     if (pkt.pdu_type() == pkt.ETHERNET_II || pkt.pdu_type() == pkt.IEEE802_3) {
         //For now forward everything
         if (1 == 1) {
@@ -46,7 +48,7 @@ bool WlanToWarpAgent::process(PDU &pkt)
 
             //-----------------> Create WARP layer and append at the end
             cout << "Original ethernet packet size is " << pkt.size() << endl;
-            this->protocol_sender->send(pkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
+            protocol_sender->send(pkt, TYPE_TRANSMIT, SUBTYPE_DATA_TRANSMIT, transmit_info);
 
             //-----------------> Clean up
             free(transmit_info);

@@ -6,8 +6,8 @@
 #include <exception>
 #include <functional>
 
-#include "config.h"
-#include "util.h"
+#include "../revised_version/config.h"
+#include "../revised_version/util.h"
 #include <tins/tins.h>
 #include "../send_receive_module/warp_protocol_sender.h"
 #include "../send_receive_module/fragment_receiver.h"

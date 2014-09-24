@@ -10,8 +10,8 @@
 #include <string>
 #include <exception>
 
-#include "config.h"
-#include "util.h"
+#include "../revised_version/config.h"
+#include "../revised_version/util.h"
 #include <tins/tins.h>
 #include "../send_receive_module/warp_protocol_sender.h"
 #include "../send_receive_module/fragment_receiver.h"
@@ -36,6 +36,7 @@ WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(
 bool WarpToWlanAgent::process(PDU &pkt)
 {
     EthernetII &ethernet_packet = pkt.rfind_pdu<EthernetII>();
+    PacketSender* packet_sender = this->packet_sender.get();
     
     if (ethernet_packet.src_addr() == Config::WARP && ethernet_packet.dst_addr() == Config::PC_ENGINE) {
         WARP_protocol &warp_layer = ethernet_packet.rfind_pdu<WARP_protocol>();
@@ -61,8 +62,8 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 // char* interface_name = WarpToWlanAgent::get_interface_name(management_frame.addr3());
 
                 // if (strlen(interface_name) > 0) {
-                    this->packet_sender->default_interface("hwsim0");
-                    this->packet_sender->send(to_send);
+                    packet_sender->default_interface("hwsim0");
+                    packet_sender->send(to_send);
                     cout << "Sent 1 packet to " << "hwsim0" << endl;
                 // } else {
                 //     cout << "ERROR: no interface found for the destination hardware address: " 
@@ -91,8 +92,8 @@ bool WarpToWlanAgent::process(PDU &pkt)
                     char* interface_name = WarpToWlanAgent::get_interface_name(data_frame.addr1());
 
                     if (strlen(interface_name) > 0) {
-                        this->packet_sender->default_interface(interface_name);
-                        this->packet_sender->send(to_send);
+                        packet_sender->default_interface(interface_name);
+                        packet_sender->send(to_send);
                         cout << "Sent 1 packet to " << interface_name << endl;
                     } else {
                         cout << "ERROR: no interface found for the destination hardware address: " 
@@ -113,8 +114,8 @@ bool WarpToWlanAgent::process(PDU &pkt)
                         char* interface_name = WarpToWlanAgent::get_interface_name(data_frame.addr1());
 
                         if (strlen(interface_name) > 0) {
-                            this->packet_sender->default_interface(interface_name);
-                            this->packet_sender->send(to_send);
+                            packet_sender->default_interface(interface_name);
+                            packet_sender->send(to_send);
                             cout << "Sent 1 packet to " << interface_name << endl;
                         } else {
                             cout << "ERROR: no interface found for the destination hardware address: " 
