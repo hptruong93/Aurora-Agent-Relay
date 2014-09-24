@@ -1,10 +1,7 @@
 CC = g++
 COMMON_FLAGS = -g -O3 -lpthread -ltins -lpcap -std=c++0x
-COMMON_FLAGS_NEW = -g -O3 -lpthread -ltins -lpcap -std=c++11
 CFLAGS = $(COMMON_FLAGS) -c
 LFLAGS = $(COMMON_FLAGS) -Wall
-CFLAGS_NEW = $(COMMON_FLAGS_NEW) -c
-LFALGS_NEW = $(COMMON_FLAGS_NEW) -Wall
 
 WARP_PROTOCOL_DIR = ../warp_protocol/
 INC_WARP_PROTOCOL = -I$(WARP_PROTOCOL_DIR)
@@ -28,7 +25,7 @@ warp_to_wlan : util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.
 	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_to_wlan.o $(LFLAGS) -o warp_to_wlan.out
 
 agents : agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o
-	$(CC) agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o $(LFALGS_NEW) -o agents.out
+	$(CC) agents.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o $(LFALGS) -o agents.out
 
 ###################################Compiling main files####################################################
 
@@ -42,19 +39,19 @@ warp_to_wlan.o : warp_to_wlan.cpp
 	$(CC) warp_to_wlan.cpp $(CFLAGS) -o warp_to_wlan.o
 
 wlan_to_warp_agent.o : wlan_to_warp_agent.cpp
-	$(CC) wlan_to_warp_agent.cpp $(CFLAGS_NEW) -o wlan_to_warp_agent.o
+	$(CC) wlan_to_warp_agent.cpp $(CFLAGS) -o wlan_to_warp_agent.o
 
 mon_to_warp_agent.o : mon_to_warp_agent.cpp
-	$(CC) mon_to_warp_agent.cpp $(CFLAGS_NEW) -o mon_to_warp_agent.o
+	$(CC) mon_to_warp_agent.cpp $(CFLAGS) -o mon_to_warp_agent.o
 
 warp_to_wlan_agent.o : warp_to_wlan_agent.cpp
-	$(CC) warp_to_wlan_agent.cpp $(CFLAGS_NEW) -o warp_to_wlan_agent.o
+	$(CC) warp_to_wlan_agent.cpp $(CFLAGS) -o warp_to_wlan_agent.o
 
 relay_agent.o : relay_agent.cpp
-	$(CC) relay_agent.cpp $(CFLAGS_NEW) -o relay_agent.o
+	$(CC) relay_agent.cpp $(CFLAGS) -o relay_agent.o
 
 agents.o : agents.cpp
-	$(CC) agents.cpp $(CFLAGS_NEW) -o agents.o
+	$(CC) agents.cpp $(CFLAGS) -o agents.o
 
 ##################################Files to link later######################################################
 
