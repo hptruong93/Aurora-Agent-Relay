@@ -30,6 +30,8 @@ WARP_ProtocolSender::~WARP_ProtocolSender()
 
 void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_protocol::WARP_transmit_struct* transmit_info)
 {
+    PacketSender* sender = this->get_sender();
+
     //At this point, assume that transmit_info has been setup correctly
     EthernetII to_send = EthernetII(WARP, PC_ENGINE);
     to_send.payload_type(WARP_PROTOCOL_TYPE);
@@ -111,7 +113,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
                 //Assemble and send
                 sending = sending / (*warp_layer) / current_fragment;
 
-                this->sender->send(sending);
+                sender->send(sending);
                 warp_layer->free_buffer();
                 delete warp_layer;
             }
@@ -128,7 +130,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
             to_send = to_send / (*init_warp_layer) / (pkt);
             //cout << "Can send in one shot" << endl;
-            this->sender->send(to_send);
+            sender->send(to_send);
         }
 
         init_warp_layer->free_buffer();
@@ -138,7 +140,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
         //The packet passed in with the input is the control packet. Append this to the ethernet header and send
         //It is safe to assume that the WARP protocol length will never exceed ethernet payload length
         to_send = to_send / pkt;
-        this->sender->send(to_send);
+        sender->send(to_send);
         cout << "Sent one control packet" << endl;
     }
 }
