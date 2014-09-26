@@ -18,9 +18,18 @@ using namespace std;
 using namespace Tins;
 using namespace Config;
 
+WARP_ProtocolSender::init(PacketSender* init_sender)
+{
+    this->sender = nullptr;
+
+    if (init_sender != NULL) {
+        this->sender.reset(init_sender);
+    }
+}
+
 WARP_ProtocolSender::WARP_ProtocolSender(PacketSender* init_sender)
 {
-    this->sender.reset(init_sender);
+    this->init(init_sender);
 }
 
 WARP_ProtocolSender::~WARP_ProtocolSender()
