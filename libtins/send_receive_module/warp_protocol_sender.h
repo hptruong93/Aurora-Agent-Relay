@@ -22,7 +22,7 @@ class WARP_ProtocolSender
         void set_sender(PacketSender* new_sender);
         PacketSender* get_sender();
     private:
-    	init(PacketSender* init_sender);
+    	void init(PacketSender* init_sender);
         std::unique_ptr<PacketSender> sender;
 };
 
