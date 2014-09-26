@@ -14,6 +14,7 @@ namespace RelayAgents {
         public:
         	WarpToWlanAgent();
             WarpToWlanAgent(PacketSender* init_packet_sender);
+            void set_out_interface(const char* out_interface);
             bool process(PDU &pkt);
             void run(int argc, char *argv[]);
             static char* get_interface_name(Dot11::address_type addr);

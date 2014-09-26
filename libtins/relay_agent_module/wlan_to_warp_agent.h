@@ -14,6 +14,7 @@ namespace RelayAgents {
         public:
         	WlanToWarpAgent();
             WlanToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
+            void set_out_interface(const char* out_interface);
             bool process(PDU &pkt);
             void run(int argc, char *argv[]);
     };

@@ -75,9 +75,7 @@ void RelayAgent::set_out_interface(const char* out_interface)
 
     this->packet_sender.reset(new PacketSender(out_interface));
 
-    if (this->protocol_sender) {
-        this->protocol_sender.reset(new WARP_ProtocolSender(this->packet_sender.release()));
-    }
+    this->protocol_sender.reset(new WARP_ProtocolSender(this->packet_sender.release()));
 }
 
 // Static

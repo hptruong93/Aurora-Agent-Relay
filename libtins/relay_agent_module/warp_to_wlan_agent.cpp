@@ -173,6 +173,13 @@ void WarpToWlanAgent::run(int argc, char *argv[])
     this->sniff();
 }
 
+void WarpToWlanAgent::set_out_interface(const char* out_interface)
+{
+    this->out_interface.reset(new std::string(out_interface));
+
+    this->packet_sender.reset(new PacketSender(out_interface));
+}
+
 // Static
 
 char* WarpToWlanAgent::get_interface_name(Dot11::address_type addr)
