@@ -42,28 +42,29 @@ string PDUTypeToString(int PDUTypeFlag) {
 }
 
 char* getInterface(Dot11::address_type addr) {
-    string address = addr.to_string();
-    cout << "Address is " << address << endl;
+    // string address = addr.to_string();
+    // cout << "Address is " << address << endl;
 
-    FILE *fp;
-    char *interface_name = (char*)malloc(64);
-    size_t interface_name_len = 0;
-    int c;
-    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
-    fp = popen(command.c_str(), "r");
+    // FILE *fp;
+    // char *interface_name = (char*)malloc(64);
+    // size_t interface_name_len = 0;
+    // int c;
+    // string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
+    // fp = popen(command.c_str(), "r");
 
-    while ((c = fgetc(fp)) != EOF)
-    {
-        if ((char) c == ' ')
-        {
-            break;
-        }
-        interface_name[interface_name_len++] = (char)c;
-    }
+    // while ((c = fgetc(fp)) != EOF)
+    // {
+    //     if ((char) c == ' ')
+    //     {
+    //         break;
+    //     }
+    //     interface_name[interface_name_len++] = (char)c;
+    // }
 
-    interface_name[interface_name_len] = '\0';
+    // interface_name[interface_name_len] = '\0';
 
-    return interface_name;
+    // return interface_name;
+    return "wlan0";
 }
 
 bool process(PDU &pkt) {
@@ -131,7 +132,7 @@ bool process(PDU &pkt) {
                                 << data_frame.addr3().to_string() << endl;
                     }
 
-                    free(interface_name);
+                    // free(interface_name);
 
                 } else {
                     try {
@@ -153,7 +154,7 @@ bool process(PDU &pkt) {
                                     << data_frame.addr3().to_string() << endl;
                         }
 
-                        free(interface_name);
+                        // free(interface_name);
                     } catch (exception& e) {
                         cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
                     }
