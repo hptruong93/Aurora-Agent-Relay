@@ -48,7 +48,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
     if (type == TYPE_TRANSMIT) {
         // Transmit Info cannot be null
         if (transmit_info == NULL) {
-            cout<<"Transmit Info cannot be null for transmit packet."<<endl;
+            cout<< "Transmit Info cannot be null for transmit packet." << endl;
             return;
         }
 
@@ -56,8 +56,6 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
         WARP_protocol::WARP_fragment_struct* fragment_info = WARP_protocol::generate_fragment_struct();
         WARP_protocol* init_warp_layer = WARP_protocol::create_transmit(transmit_info, fragment_info, subtype);
 
-        // cout << "Total data length is " << pkt.size() + warp_layer->header_size() << endl;
-        // cout << "Actual data length is " << pkt.size() << endl;
         if (pkt.size() + init_warp_layer->header_size() > Config::MAX_ETHERNET_LENGTH) {//Split into several fragment
             uint16_t fragment_max_length = Config::MAX_ETHERNET_LENGTH - init_warp_layer->header_size();
             // cout << "Too long, need to be fragmented. Available space is " << fragment_max_length << endl;
@@ -73,13 +71,6 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
             //For some reason can't use the packet_data as the buffer....????!!!!
             static uint8_t temp_buffer[2048];
             memcpy(temp_buffer, &(packet_data[0]), packet_data.size());
-
-            // printf("First at %d\n", temp_buffer);
-            // uint8_t j = 0;
-            // for (; j < 45; j++) {
-            //     printf("%02x-", *(temp_buffer + 0 + j));
-            // }
-            // printf("\n");
 
             for (; i < total_number_fragment; i++) {
                 // printf("Looping with index = %d\n", i);
@@ -101,20 +92,8 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
                 }
                 transmit_info->payload_size = fragment_length;
 
-                // printf("Just before %d at %d\n", 0, temp_buffer);
-                // for (j = 0; j < 45; j++) {
-                //     printf("%02x-", *(temp_buffer + 0 + j));
-                // }
-                // printf("\n");
-
                 WARP_protocol* warp_layer = WARP_protocol::create_transmit(transmit_info, fragment_info, subtype);
                 // cout << "Fragment length is " << fragment_length << endl;
-
-                // printf("Offset %d at %d\n", byte_offset, temp_buffer);
-                // for (j = 0; j < 45; j++) {
-                //     printf("%02x-", *(temp_buffer + byte_offset + j));
-                // }
-                // printf("\n");
 
                 RawPDU current_fragment(temp_buffer + byte_offset, fragment_length);                
                 //Prepared
@@ -123,26 +102,14 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
                 sending = sending / (*warp_layer) / current_fragment;
 
                 sender->send(sending);
-                warp_layer->free_buffer();
                 delete warp_layer;
             }
         } else {//Send in one fragment
-            // printf("Total split %d\n", total_number_fragment);
-            // printf("Header size is %d\n", warp_layer->header_size());
-            // uint8_t* packet_data = &(pkt.serialize()[0]);
-
-            // uint8_t j = 0;
-            // for (; j < 20; j++) {
-            //     printf("%02x-", *(packet_data + 0 + j));
-            // }
-            // printf("\n");
-
             to_send = to_send / (*init_warp_layer) / (pkt);
             //cout << "Can send in one shot" << endl;
             sender->send(to_send);
         }
 
-        init_warp_layer->free_buffer();
         delete init_warp_layer;
         free(fragment_info);
     } else if (type == TYPE_CONTROL) {
