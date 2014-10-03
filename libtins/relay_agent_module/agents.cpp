@@ -25,18 +25,50 @@ void AgentFactory::spin()
 {
     zmq::message_t received_msg;
     zmq::message_t send_message(DEFAULT_MSG_SIZE);
+
     while(true)
     {
         this->socket.get()->recv(&(received_msg));
 
         // Do parsing
+        if (this->util.parse_json((char*)received_msg.data()) == 0)
+        {
+            char *argv[4];
+            int argc = 0;
+            // Everything successfullly parsed
+            argc = this->util.get_parameter_count();
+            argv[0] = this->util.transfer_parameter(INTERFACE_IN);
+            argv[1] = this->util.transfer_parameter(INTERFACE_OUT);
+            if (argc > 2)
+            {
+                argv[2] = this->util.transfer_parameter(MAC_ADDRESS);
+            }
+
+            // Spawn thread
+            {
+                this->spawn_agent_thread(this->util.get_parameter(AGENT_TYPE), argc, argv);
+            }
+        }
+
+        // TODO: Generate message to send back
 
         send_message.rebuild();
         this->socket.get()->send(send_message);
     }
 }
 
-AgentUtil::AgentUtil() : in_interface(nullptr), out_interface(nullptr), mac_addr(nullptr), parameters(0)
+void AgentFactory::spawn_agent_thread(const char *agent_type, int argc, char *argv[])
+{
+    if (strcmp(agent_type, WLAN_TO_WARP) == 0)
+    {
+        WlanToWarpAgent agent;
+        thread agent_thread(&WlanToWarpAgent::run, &agent, argc, argv);
+
+        agent_thread.detach();
+    }
+}
+
+AgentUtil::AgentUtil() : in_interface(nullptr), out_interface(nullptr), mac_addr(nullptr), agent_type(nullptr), parameters(0)
 {
 
 }
@@ -100,6 +132,10 @@ char* AgentUtil::get_parameter(const char *parameter_name) const
     {
         return this->mac_addr.get();
     }
+    else if (strcmp(parameter_name, AGENT_TYPE) == 0)
+    {
+        return this->agent_type.get();
+    }
 
     return NULL;    
 }
@@ -109,6 +145,7 @@ void AgentUtil::reset()
     this->in_interface.reset();
     this->out_interface.reset();
     this->mac_addr.reset();
+    this->agent_type.reset();
     this->parameters = 0;
 }
 
