@@ -1,6 +1,8 @@
 #ifndef WARP_PROTOCOL_H
 #define WARP_PROTOCOL_H
 
+#include <mutex>
+
 #include "tins/macros.h"
 #include "tins/pdu.h"
 #include "tins/tins.h"
@@ -67,6 +69,7 @@
 namespace Tins {
 
     static uint16_t Fragment_Id = 0;
+    static std::mutex Fragment_Id_Mux;
  
     class WARP_protocol: public PDU {
 

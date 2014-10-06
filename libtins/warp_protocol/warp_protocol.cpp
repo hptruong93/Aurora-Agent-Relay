@@ -68,6 +68,8 @@ namespace Tins {
 
         WARP_fragment_struct* output = (WARP_fragment_struct*) calloc(1, sizeof(WARP_fragment_struct));
 
+        std::lock_guard<std::mutex> id_lock(Tins::Fragment_Id_Mux);
+
         output->id = Tins::Fragment_Id;
         Tins::Fragment_Id++;
         if (Tins::Fragment_Id == RESERVED_FRAGMENT_ID) {
