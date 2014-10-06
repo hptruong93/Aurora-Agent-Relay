@@ -1,60 +1,27 @@
-#include "mon_to_warp_agent.h"
-#include "wlan_to_warp_agent.h"
-#include "warp_to_wlan_agent.h"
-#include "agents.h"
-
 #include <thread>
 #include <iostream>
 
 #include <zmq.hpp>
 #include <jansson.h>
 
+#include "mon_to_warp_agent.h"
+#include "wlan_to_warp_agent.h"
+#include "warp_to_wlan_agent.h"
+#include "agents.h"
+
 using namespace RelayAgents;
 using namespace std;
 
-AgentFactory::AgentFactory(string init_port) : port(init_port), util(AgentUtil())
+ErrorCode parse_mac(const char* origin, uint8_t dest[])
 {
-    this->context = unique_ptr<zmq::context_t>(new zmq::context_t(1));
-    this->socket = unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context.get()), ZMQ_REP));
-
-    string address = "tcp://*:" + this->port;
-    (this->socket.get())->bind(address.c_str());
-}
-
-void AgentFactory::spin()
-{
-    zmq::message_t received_msg;
-    zmq::message_t send_message(DEFAULT_MSG_SIZE);
-
-    while(true)
+    if (sscanf(origin, "%02c:%02c:%02c:%02c:%02c:%02c", &dest[0], &dest[1], &dest[2], &dest[3], &dest[4], &dest[5]) != 6)
     {
-        this->socket.get()->recv(&(received_msg));
+        cout<<"ERROR: Failed to parse mac address string into uint arrays"<<endl;
 
-        // Do parsing
-        if (this->util.parse_json((char*)received_msg.data()) == 0)
-        {
-            char *argv[4];
-            int argc = 0;
-            // Everything successfullly parsed
-            argc = this->util.get_parameter_count();
-            argv[0] = this->util.transfer_parameter(INTERFACE_IN);
-            argv[1] = this->util.transfer_parameter(INTERFACE_OUT);
-            if (argc > 2)
-            {
-                argv[2] = this->util.transfer_parameter(MAC_ADDRESS);
-            }
-
-            // Spawn thread
-            {
-                this->spawn_agent_thread(this->util.get_parameter(AGENT_TYPE), argc, argv);
-            }
-        }
-
-        // TODO: Generate message to send back
-
-        send_message.rebuild();
-        this->socket.get()->send(send_message);
+        return ErrorCode::ERROR;
     }
+
+    return ErrorCode::OK;
 }
 
 void AgentFactory::spawn_agent_thread(const char *agent_type, int argc, char *argv[])
@@ -68,85 +35,145 @@ void AgentFactory::spawn_agent_thread(const char *agent_type, int argc, char *ar
     }
 }
 
-AgentUtil::AgentUtil() : in_interface(nullptr), out_interface(nullptr), mac_addr(nullptr), agent_type(nullptr), parameters(0)
+AgentUtil::AgentUtil(const char *init_out_interface, string init_send_port, string init_recv_port) 
+                : send_port(init_send_port), recv_port(init_recv_port)
 {
+    this->out_interface = unique_ptr<string>(new string(init_out_interface));
+    this->protocol_sender = unique_ptr<WARP_ProtocolSender>(new WARP_ProtocolSender(new PacketSender(init_out_interface)));
 
+    // ZMQ settings
+    this->context = unique_ptr<zmq::context_t>(new zmq::context_t(1));
+    this->pub_socket = unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context.get()), ZMQ_PUB));
+    this->sub_socket = unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context.get()), ZMQ_SUB));
+
+    string pub_address = "tcp://*:" + this->send_port;
+    this->pub_socket.get()->bind(pub_address.c_str());
+
+    string sub_address = "tcp://*:" + this->recv_port;
+    this->sub_socket.get()->connect(sub_address.c_str());
+
+    // Set socket options for receive socket
+    // Receive everything for now
+    this->sub_socket.get()->setsockopt(ZMQ_SUBSCRIBE, "", 0);
 }
 
-int AgentUtil::parse_json(const char *json_string)
+void AgentUtil::spin()
 {
-    this->reset();
-    
+    zmq::message_t received_msg;
+
+    while(true)
+    {
+        this->sub_socket.get()->recv(&(received_msg));
+
+        // Do parsing
+        this->parse_json((char*)received_msg.data());
+    }
+}
+
+ErrorCode AgentUtil::parse_json(const char *json_string)
+{
     json_t *root;
     json_error_t error;
+
+    zmq::message_t send_message(DEFAULT_MSG_SIZE);
 
     root = json_loads(json_string, 0, &error);
     if (!root)
     {
         cout<<"ERROR: on line "<<error.line<<": "<<error.text<<endl;
 
-        return 1;
+        return ErrorCode::ERROR;
     }
 
-    // TOdO: Json Parsing
+    // Check if is array
+    if (!json_is_array(root))
+    {
+        cout<<"ERROR: json root is not array"<<endl;
+        json_decref(root);
+
+        return ErrorCode::ERROR;
+    }
+
+    for(int i = 0; i < json_array_size(root); i++)
+    {
+        json_t *data, *mac_addr, *channel, *hwmode, *txpower, *disabled;
+
+        data = json_array_get(root, i);
+        // TODO: send back the first data
+        if (!json_is_object(data))
+        {
+            cout<<"ERROR: Corrupt Json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        mac_addr = json_object_get(data, MAC_ADDRESS);
+        if (!json_is_string(mac_addr))
+        {
+            cout<<"ERROR: Corrupt mac address for json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        channel = json_object_get(data, CHANNEL);
+        if (!json_is_integer(channel))
+        {
+            cout<<"ERROR: Corrupt channel for json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        hwmode = json_object_get(data, HW_MODE);
+        if (!json_is_integer(hwmode))
+        {
+            cout<<"ERROR: Corrupt hwmode for json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        txpower = json_object_get(data, TX_POWER);
+        if (!json_is_integer(txpower))
+        {
+            cout<<"ERROR: Corrupt txpower for json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        disabled = json_object_get(data, DISABLED);
+        if (!json_is_integer(disabled))
+        {
+            cout<<"ERROR: Corrupt disabled for json object at index "<<i<<endl;
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        // Parsing done
+        WARP_protocol::WARP_transmission_control_struct transmission_cntrl_struct;
+        transmission_cntrl_struct.disabled = (uint8_t) json_integer_value(disabled);
+        transmission_cntrl_struct.tx_power = (uint8_t) json_integer_value(txpower);
+        transmission_cntrl_struct.channel = (uint8_t) json_integer_value(channel);
+        transmission_cntrl_struct.rate = 1;
+        transmission_cntrl_struct.hw_mode = (uint8_t) json_integer_value(hwmode);
+
+        if (parse_mac(json_string_value(mac_addr), transmission_cntrl_struct.bssid) != ErrorCode::OK)
+        {
+            return ErrorCode::ERROR;
+        }
+
+        WARP_protocol *packet = WARP_protocol::create_transmission_control(&transmission_cntrl_struct);
+        this->protocol_sender.get()->send(*packet, TYPE_CONTROL, SUBTYPE_TRANSMISSION_CONTROL);
+        delete packet;
+    }
 
     json_decref(root);
 
-    return 0;
-}
-
-int AgentUtil::get_parameter_count() const
-{
-    return this->parameters;
-}
-
-char* AgentUtil::transfer_parameter(const char *parameter_name)
-{
-    if (strcmp(parameter_name, INTERFACE_IN) == 0)
-    {
-        return this->in_interface.release();
-    }
-    else if (strcmp(parameter_name, INTERFACE_OUT) == 0)
-    {
-        return this->out_interface.release();
-    }
-    else if (strcmp(parameter_name, MAC_ADDRESS) == 0)
-    {
-        return this->mac_addr.release();
-    }
-
-    return NULL;
-}
-
-char* AgentUtil::get_parameter(const char *parameter_name) const
-{
-    if (strcmp(parameter_name, INTERFACE_IN) == 0)
-    {
-        return this->in_interface.get();
-    }
-    else if (strcmp(parameter_name, INTERFACE_OUT) == 0)
-    {
-        return this->out_interface.get();
-    }
-    else if (strcmp(parameter_name, MAC_ADDRESS) == 0)
-    {
-        return this->mac_addr.get();
-    }
-    else if (strcmp(parameter_name, AGENT_TYPE) == 0)
-    {
-        return this->agent_type.get();
-    }
-
-    return NULL;    
-}
-
-void AgentUtil::reset()
-{
-    this->in_interface.reset();
-    this->out_interface.reset();
-    this->mac_addr.reset();
-    this->agent_type.reset();
-    this->parameters = 0;
+    return ErrorCode::OK;
 }
 
 int main(int argc, char *argv[])
