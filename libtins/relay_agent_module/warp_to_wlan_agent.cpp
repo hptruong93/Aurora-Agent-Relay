@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string>
 #include <exception>
+#include <vector>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -139,24 +140,25 @@ bool WarpToWlanAgent::process(PDU &pkt)
     return true;
 }
 
-void WarpToWlanAgent::run(int argc, char *argv[])
+void WarpToWlanAgent::run(vector<string>& args)
 {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
+    int argc = args.size();
     
-    if (argc >= 3) {
-        this->set_in_interface(argv[1]);
-        this->set_out_interface(argv[2]);
-        cout << "Init warp to wlan from " << argv[1] << " to " << argv[2] << endl;
+    if (argc >= 2) {
+        this->set_in_interface(args[0].c_str());
+        this->set_out_interface(args[1].c_str());
+        // cout << "Init warp to wlan from " << args[0] << " to " << args[1] << endl;
 
-        if (argc >= 4) {
-            string mon_interface = argv[2];
-            string wlan_interface = argv[3];
+        if (argc >= 3) {
+            string mon_interface = args[1];
+            string wlan_interface = args[2];
             cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
         }
 
-        if (argc == 5) {
-            Config::HOSTAPD = Tins::HWAddress<6>(argv[4]);
-            cout << "hostapd mac is " << argv[4] << endl;
+        if (argc == 4) {
+            Config::HOSTAPD = Tins::HWAddress<6>(args[3].c_str());
+            cout << "hostapd mac is " << args[3] << endl;
         }
     } else {
         this->set_in_interface("eth1");

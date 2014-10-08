@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string>
 #include <exception>
+#include <vector>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -45,7 +46,7 @@ namespace RelayAgents {
             virtual void set_in_interface(const char* set_in_interface);
             virtual void set_out_interface(const char* out_interface);
             virtual bool process(PDU &pkt);
-            virtual void run(int argc, char *argv[]);
+            virtual void run(vector<string>& args);
             // static
             static std::string PDU_Type_To_String(int PDUTypeFlag);
         protected:

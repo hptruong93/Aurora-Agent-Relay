@@ -19,8 +19,8 @@ all: agents
 
 ########################################  Linking  ########################################################
 
-agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o comms_agent.o agents.o
-	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o comms_agent.o agents.o $(LFLAGS) -o agents.out
+agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o agents.o
+	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o agents.o $(LFLAGS) -o agents.out
 
 ###################################Compiling main files####################################################
 

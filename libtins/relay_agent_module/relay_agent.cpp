@@ -94,7 +94,7 @@ bool RelayAgent::process(PDU &pkt)
     throw bad_function_call();
 }
 
-void RelayAgent::run(int argc, char *argv[])
+void RelayAgent::run(vector<string>& args)
 {
     throw bad_function_call();
 }

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string>
 #include <exception>
+#include <vector>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -60,16 +61,18 @@ bool WlanToWarpAgent::process(PDU &pkt)
     return true;
 }
 
-void WlanToWarpAgent::run(int argc, char *argv[])
+void WlanToWarpAgent::run(vector<string>& args)
 {
-    if (argc >= 3) {
-        this->set_in_interface(argv[1]);
-        this->set_out_interface(argv[2]);
-        cout << "Init pc to warp from " << argv[1] << " to " << argv[2] << endl;
+    int argc = args.size();
 
-        if (argc == 4) {
-            Config::HOSTAPD = Tins::HWAddress<6>(argv[3]);
-            cout << "hostapd mac is " << argv[3] << endl;
+    if (argc >= 2) {
+        this->set_in_interface(args[0].c_str());
+        this->set_out_interface(args[1].c_str());
+        cout << "Init pc to warp from " << args[0] << " to " << args[1] << endl;
+
+        if (argc == 3) {
+            Config::HOSTAPD = Tins::HWAddress<6>(args[2].c_str());
+            cout << "hostapd mac is " << args[2] << endl;
         }        
     } else {
         this->set_in_interface("hwsim0");
