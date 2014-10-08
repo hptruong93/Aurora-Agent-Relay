@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
 
         if (parse_input(input_string, args) == ParseFunctionCode::NEW_THREAD)
         {
-
+            factory.spawn_agent_thread(args);
         }
     }
 
