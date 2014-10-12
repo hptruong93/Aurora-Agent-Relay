@@ -81,7 +81,12 @@ bool WarpToWlanAgent::process(PDU &pkt)
                     //     assembled_data[i] = 0;
                     // }
                     // data_length = 46;
-                    return true;
+                    // If agent receives stop signal then this is the last process function called
+                    this->status_lock.lock();
+                    bool reutrn_code = !this->complete;
+                    this->status_lock.unlock();
+
+                    return reutrn_code;
                 }
 
                 Dot11Data data_frame(assembled_data, data_length);
@@ -137,10 +142,16 @@ bool WarpToWlanAgent::process(PDU &pkt)
 
         free(receive_result.info_address);
     }
-    return true;
+
+    // If agent receives stop signal then this is the last process function called
+    this->status_lock.lock();
+    bool reutrn_code = !this->complete;
+    this->status_lock.unlock();
+
+    return reutrn_code;
 }
 
-void WarpToWlanAgent::run(vector<string>& args)
+void WarpToWlanAgent::run(vector<string> args)
 {
     Allocators::register_allocator<EthernetII, Tins::WARP_protocol>(WARP_PROTOCOL_TYPE);
     int argc = args.size();

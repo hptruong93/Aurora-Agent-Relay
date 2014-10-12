@@ -10,6 +10,7 @@
 #include <string>
 #include <exception>
 #include <vector>
+#include <mutex>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -42,14 +43,17 @@ namespace RelayAgents {
     class RelayAgent {
         public:
             WARP_ProtocolSender* getSender() const;
+            void signal_complete();
             virtual void sniff();
             virtual void set_in_interface(const char* set_in_interface);
             virtual void set_out_interface(const char* out_interface);
             virtual bool process(PDU &pkt);
-            virtual void run(vector<string>& args);
+            virtual void run(vector<string> args);
             // static
             static std::string PDU_Type_To_String(int PDUTypeFlag);
         protected:
+            std::mutex status_lock;
+            bool complete;
             RelayAgent();
             RelayAgent(WARP_ProtocolSender* init_protocol_sender);
             RelayAgent(PacketSender* init_packet_sender);

@@ -5,6 +5,7 @@
 #include <string>
 #include <exception>
 #include <functional>
+#include <iostream>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -44,6 +45,10 @@ RelayAgent::~RelayAgent()
 
 void RelayAgent::init(WARP_ProtocolSender* init_protocol_sender, PacketSender* init_packet_sender)
 {
+    this->status_lock.lock();
+    this->complete = false;
+    this->status_lock.unlock();
+
     this->packet_sender = nullptr;
     this->protocol_sender = nullptr;
     this->in_interface = std::unique_ptr<std::string>(new std::string(""));
@@ -78,6 +83,13 @@ void RelayAgent::set_out_interface(const char* out_interface)
     this->protocol_sender.reset(new WARP_ProtocolSender(this->packet_sender.release()));
 }
 
+void RelayAgent::signal_complete()
+{
+    this->status_lock.lock();
+    this->complete = true;
+    this->status_lock.unlock();
+}
+
 // Static
 
 std::string RelayAgent::PDU_Type_To_String(int type)
@@ -91,10 +103,11 @@ std::string RelayAgent::PDU_Type_To_String(int type)
 // Empty functions
 bool RelayAgent::process(PDU &pkt)
 {
-    throw bad_function_call();
+    // throw bad_function_call();
 }
 
-void RelayAgent::run(vector<string>& args)
+void RelayAgent::run(vector<string> args)
 {
-    throw bad_function_call();
+    // throw bad_function_call();
+    cout<<"Parent!"<<endl;
 }

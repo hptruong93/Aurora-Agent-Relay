@@ -1,3 +1,10 @@
+#include <thread>
+#include <iostream>
+
+#include "mon_to_warp_agent.h"
+#include "wlan_to_warp_agent.h"
+#include "warp_to_wlan_agent.h"
+#include "relay_agent.h"
 #include "comms_agent.h"
 
 using namespace RelayAgents;
@@ -164,4 +171,63 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     json_decref(root);
 
     return ErrorCode::OK;
+}
+
+
+// Static variable init
+int AgentFactory::current_thread_id = 0;
+mutex AgentFactory::lock;
+std::map<int, std::shared_ptr<RelayAgent>> AgentFactory::agent_threads;
+
+void AgentFactory::spawn_agent_thread(vector<string>& args)
+{
+    string agent_type = args[0];
+    args.erase(args.begin());
+    if (agent_type.compare(WLAN_TO_WARP) == 0)
+    {
+        shared_ptr<WlanToWarpAgent> agent = make_shared<WlanToWarpAgent>();
+        thread agent_thread(&WlanToWarpAgent::run, agent.get(), args);
+
+        AgentFactory::lock.lock();
+        AgentFactory::agent_threads.insert(pair<int, shared_ptr<RelayAgent>>(AgentFactory::current_thread_id, shared_ptr<RelayAgent>(agent)));
+        AgentFactory::current_thread_id++;
+        AgentFactory::lock.unlock();
+
+        agent_thread.detach();
+    }
+    else if (agent_type.compare(MON_TO_WARP) == 0)
+    {
+        shared_ptr<MonToWarpAgent> agent = make_shared<MonToWarpAgent>();
+        thread agent_thread(&MonToWarpAgent::run, agent.get(), args);
+
+        AgentFactory::lock.lock();
+        AgentFactory::agent_threads.insert(pair<int, shared_ptr<RelayAgent>>(AgentFactory::current_thread_id, shared_ptr<RelayAgent>(agent)));
+        AgentFactory::current_thread_id++;
+        AgentFactory::lock.unlock();
+
+        agent_thread.detach();
+    }
+    else if (agent_type.compare(WARP_TO_WLAN) == 0)
+    {
+        shared_ptr<WarpToWlanAgent> agent = make_shared<WarpToWlanAgent>();
+        thread agent_thread(&WarpToWlanAgent::run, agent.get(), args);
+
+        AgentFactory::lock.lock();
+        AgentFactory::agent_threads.insert(pair<int, shared_ptr<RelayAgent>>(AgentFactory::current_thread_id, shared_ptr<RelayAgent>(agent)));
+        AgentFactory::current_thread_id++;
+        AgentFactory::lock.unlock();
+
+        agent_thread.detach();
+    }
+}
+
+void AgentFactory::kill_agent_thread(int thread_id)
+{
+    AgentFactory::lock.lock();
+
+    AgentFactory::agent_threads[thread_id].get()->signal_complete();
+    AgentFactory::agent_threads[thread_id].reset();
+    AgentFactory::agent_threads.erase(thread_id);
+
+    AgentFactory::lock.unlock();
 }

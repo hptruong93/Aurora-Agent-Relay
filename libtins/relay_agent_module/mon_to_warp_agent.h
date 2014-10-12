@@ -20,7 +20,7 @@ namespace RelayAgents {
             MonToWarpAgent(WARP_ProtocolSender* init_protocol_sender);
             void set_out_interface(const char* out_interface);
             bool process(PDU &pkt);
-            void run(vector<string>& args);
+            void run(vector<string> args);
 
             // Static methods and constants
             static bool Is_Management_Frame(int type);

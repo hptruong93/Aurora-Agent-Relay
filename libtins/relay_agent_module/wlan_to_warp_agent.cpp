@@ -10,6 +10,7 @@
 #include <string>
 #include <exception>
 #include <vector>
+#include <iostream>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -58,12 +59,21 @@ bool WlanToWarpAgent::process(PDU &pkt)
     } else {
         cerr << "Error: Non EthernetII Packet Detected!" << endl;
     }
-    return true;
+
+    // If agent receives stop signal then this is the last process function called
+    this->status_lock.lock();
+    bool reutrn_code = !this->complete;
+    this->status_lock.unlock();
+
+    return reutrn_code;
 }
 
-void WlanToWarpAgent::run(vector<string>& args)
+void WlanToWarpAgent::run(vector<string> args)
 {
+    cout<<"Child!"<<endl;
     int argc = args.size();
+
+    std::cout<<argc<<std::endl;
 
     if (argc >= 2) {
         this->set_in_interface(args[0].c_str());

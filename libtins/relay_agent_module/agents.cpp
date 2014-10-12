@@ -1,11 +1,8 @@
 #include <thread>
 #include <iostream>
 #include <vector>
-#include <stdio.h>
 #include <string>
-
-#include <zmq.hpp>
-#include <jansson.h>
+#include <stdio.h>
 
 #include "mon_to_warp_agent.h"
 #include "wlan_to_warp_agent.h"
@@ -49,51 +46,20 @@ ParseFunctionCode parse_input(string input, vector<string>& tokens)
     }
 }
 
-AgentFactory::AgentFactory()
-{
-
-}
-
-void AgentFactory::spawn_agent_thread(vector<string>& args)
-{
-    string agent_type = args[0];
-    args.erase(args.begin());
-    if (agent_type.compare(WLAN_TO_WARP) == 0)
-    {
-        WlanToWarpAgent agent;
-        thread agent_thread(&WlanToWarpAgent::run, &agent, ref(args));
-
-        agent_thread.detach();
-    }
-    else if (agent_type.compare(MON_TO_WARP) == 0)
-    {
-        MonToWarpAgent agent;
-        thread agent_thread(&MonToWarpAgent::run, &agent, ref(args));
-
-        agent_thread.detach();
-    }
-    else if (agent_type.compare(WARP_TO_WLAN) == 0)
-    {
-        WarpToWlanAgent agent;
-        thread agent_thread(&WarpToWlanAgent::run, &agent, ref(args));
-
-        agent_thread.detach();
-    }
-}
-
 int main(int argc, char *argv[])
 {
-    if (argc < 4)
-    {
-        cout<<"Invalid number of arguments.Need out interface, send port and receive port."<<endl;
-    }
+    // if (argc < 4)
+    // {
+    //     cout<<"Invalid number of arguments.Need out interface, send port and receive port."<<endl;
+    // }
 
-    CommsAgent comms_agent(argv[1], argv[2], argv[3]);
-    thread comms_thread(&CommsAgent::spin, &comms_agent);
-    comms_thread.detach();
+    // // Comms Agent
+    // CommsAgent comms_agent(argv[1], argv[2], argv[3]);
+    // thread comms_thread(&CommsAgent::spin, &comms_agent);
+    // comms_thread.detach();
 
+    // Agent Factory
     string input_string;
-    AgentFactory factory;
 
     // Main thread. Manually spawn agent threads
     while(true)
@@ -104,7 +70,7 @@ int main(int argc, char *argv[])
 
         if (parse_input(input_string, args) == ParseFunctionCode::NEW_THREAD)
         {
-            factory.spawn_agent_thread(args);
+            AgentFactory::spawn_agent_thread(args);
         }
     }
 

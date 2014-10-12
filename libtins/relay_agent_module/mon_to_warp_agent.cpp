@@ -105,10 +105,16 @@ bool MonToWarpAgent::process(PDU &pkt)
     } else {
         cerr << "Error: Non RadioTap Packet Detected!" << endl;
     }
-    return true;
+    
+    // If agent receives stop signal then this is the last process function called
+    this->status_lock.lock();
+    bool reutrn_code = !this->complete;
+    this->status_lock.unlock();
+
+    return reutrn_code;
 }
 
-void MonToWarpAgent::run(vector<string>& args)
+void MonToWarpAgent::run(vector<string> args)
 {
     int argc = args.size();
     if (argc >= 2) {

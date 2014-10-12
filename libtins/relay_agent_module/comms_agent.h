@@ -7,10 +7,15 @@
 #include "../warp_protocol/warp_protocol.h"
 
 #include <string>
+#include <vector>
+#include <map>
+#include <mutex>
 
 #include <zmq.hpp>
 #include <jansson.h>
 #include <tins/tins.h>
+
+#include "relay_agent.h"
 
 #define DEFAULT_MSG_SIZE                1024
 
@@ -20,6 +25,12 @@
 #define HW_MODE                         "hwmode"
 #define TX_POWER                        "txpower"
 #define DISABLED                        "disabled"
+
+// Command for factory
+#define WLAN_TO_WARP                    "wlan_to_warp"
+#define MON_TO_WARP                     "mon_to_warp"
+#define WARP_TO_WLAN                    "warp_to_wlan"
+#define HELP_COMMAND                    "help"
 
 #define AGENT_TYPE                      "agent_type"
 
@@ -44,8 +55,20 @@ namespace RelayAgents {
             ErrorCode parse_json(const char *json_string);
             void spin();
     };
+    
+    // Receives command and initialize different agents
+    class AgentFactory {
+        public:
+            // The map stores both thread information and pointers to agents that are being used
+            static std::map<int, std::shared_ptr<RelayAgent>> agent_threads;
+            static int current_thread_id;
+            static std::mutex lock;
+            static void spawn_agent_thread(std::vector<std::string>& args);
+            static void kill_agent_thread(int id);
+    };
 }
 
-RelayAgents::ErrorCode parse_mac(const char *origin, uint8_t dest[]);
+// Function declarations
 
+RelayAgents::ErrorCode parse_mac(const char *origin, uint8_t dest[]);
 #endif
