@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <semaphore.h>
 
 #include <zmq.hpp>
 #include <jansson.h>
@@ -30,7 +31,6 @@
 #define WLAN_TO_WARP                    "wlan_to_warp"
 #define MON_TO_WARP                     "mon_to_warp"
 #define WARP_TO_WLAN                    "warp_to_wlan"
-#define HELP_COMMAND                    "help"
 
 #define AGENT_TYPE                      "agent_type"
 
@@ -51,9 +51,15 @@ namespace RelayAgents {
         std::unique_ptr<zmq::socket_t> pub_socket;
         std::unique_ptr<zmq::socket_t> sub_socket;
         public:
-            CommsAgent(const char *init_out_interface = "eth1", std::string init_send_port = "5555", std::string init_recv_port = "5556");
+            CommsAgent(const char *init_out_interface = NULL, std::string init_send_port = "5555", std::string init_recv_port = "5556");
             ErrorCode parse_json(const char *json_string);
+            void set_out_interface(const char *new_out_interface);
             void spin();
+
+            // TODO
+            static std::mutex message_lock;
+            static std::unique_ptr<string> send_message;
+            static sem_t signal;
     };
     
     // Receives command and initialize different agents

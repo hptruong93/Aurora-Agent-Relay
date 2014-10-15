@@ -4,10 +4,15 @@
 #include <vector>
 #include <string>
 
+// Commands
+#define HELP_COMMAND                    "help"
+#define KILL_COMMAND					"kill"
+
 namespace RelayAgents {
     enum class ParseFunctionCode {
         NEW_THREAD,
         HELP,
+        KILL,
         ERROR
     };
 }

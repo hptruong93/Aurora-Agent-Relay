@@ -9,6 +9,8 @@
 #include "warp_to_wlan_agent.h"
 #include "comms_agent.h"
 #include "agents.h"
+// Testing
+#include "test.h"
 
 using namespace RelayAgents;
 using namespace std;
@@ -31,6 +33,11 @@ ParseFunctionCode parse_input(string input, vector<string>& tokens)
         // Help function
         return ParseFunctionCode::HELP;
     }
+    else if (command.compare(KILL_COMMAND) == 0)
+    {
+        // Kill a thread
+        return ParseFunctionCode::KILL;
+    }
     else if ((command.compare(WLAN_TO_WARP) == 0) ||
                 (command.compare(MON_TO_WARP) == 0) ||
                 (command.compare(WARP_TO_WLAN) == 0))
@@ -48,15 +55,27 @@ ParseFunctionCode parse_input(string input, vector<string>& tokens)
 
 int main(int argc, char *argv[])
 {
-    // if (argc < 4)
-    // {
-    //     cout<<"Invalid number of arguments.Need out interface, send port and receive port."<<endl;
-    // }
+    #ifdef TEST_JSON_DECODER
 
-    // // Comms Agent
-    // CommsAgent comms_agent(argv[1], argv[2], argv[3]);
-    // thread comms_thread(&CommsAgent::spin, &comms_agent);
-    // comms_thread.detach();
+    CommsAgent comms_agent;
+    comms_agent.parse_json(SAMPLE_JSON_STRING);
+
+    #else
+
+    if (argc < 4)
+    {
+        // Comms Agent
+        CommsAgent comms_agent;
+        thread comms_thread(&CommsAgent::spin, &comms_agent);
+        comms_thread.detach();
+    }
+    else
+    {
+        // Comms Agent
+        CommsAgent comms_agent(argv[1], argv[2], argv[3]);
+        thread comms_thread(&CommsAgent::spin, &comms_agent);
+        comms_thread.detach();
+    }
 
     // Agent Factory
     string input_string;
@@ -68,11 +87,18 @@ int main(int argc, char *argv[])
         cout<<"Enter command:"<<endl;
         getline(cin, input_string);
 
-        if (parse_input(input_string, args) == ParseFunctionCode::NEW_THREAD)
+        ParseFunctionCode code = parse_input(input_string, args);
+        if (code == ParseFunctionCode::NEW_THREAD)
         {
             AgentFactory::spawn_agent_thread(args);
         }
+        else if (code == ParseFunctionCode::KILL)
+        {
+            AgentFactory::kill_agent_thread(stoi(args[1]));
+        }
     }
+
+    #endif
 
     return 0;
 }
