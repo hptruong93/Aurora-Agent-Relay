@@ -43,20 +43,21 @@ namespace RelayAgents {
 
     // Utility class
     class CommsAgent {
-        std::string send_port;
-        std::string recv_port;
+        std::unique_ptr<const char> send_port;
+        std::unique_ptr<const char> recv_port;
         std::unique_ptr<std::string> out_interface;
         std::unique_ptr<WARP_ProtocolSender> protocol_sender;
-        std::unique_ptr<zmq::context_t> context;
         std::unique_ptr<zmq::socket_t> pub_socket;
         std::unique_ptr<zmq::socket_t> sub_socket;
         public:
-            CommsAgent(const char *init_out_interface = NULL, std::string init_send_port = "5555", std::string init_recv_port = "5556");
+            CommsAgent(const char *init_out_interface = NULL, const char *init_send_port = "5555", const char *init_recv_port = "5556");
             ErrorCode parse_json(const char *json_string);
             void set_out_interface(const char *new_out_interface);
-            void spin();
+            void send_loop();
+            void recv_loop();
 
-            // TODO
+            // Used by zmq receiver to signal the send to send the first packet recieved
+            // Back to the source
             static std::mutex message_lock;
             static std::unique_ptr<string> send_message;
             static sem_t signal;

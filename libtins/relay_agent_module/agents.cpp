@@ -62,19 +62,27 @@ int main(int argc, char *argv[])
 
     #else
 
+    unique_ptr<CommsAgent> comms_agent;
+
     if (argc < 4)
     {
         // Comms Agent
-        CommsAgent comms_agent;
-        thread comms_thread(&CommsAgent::spin, &comms_agent);
-        comms_thread.detach();
+        comms_agent = unique_ptr<CommsAgent>(new CommsAgent(NULL, "5555", "5556"));
+        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
+        thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
+        comms_receive_thread.detach();
+        comms_send_thread.detach();
+
+        //comms_agent.send();
     }
     else
     {
         // Comms Agent
-        CommsAgent comms_agent(argv[1], argv[2], argv[3]);
-        thread comms_thread(&CommsAgent::spin, &comms_agent);
-        comms_thread.detach();
+        comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
+        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
+        thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
+        comms_receive_thread.detach();
+        comms_send_thread.detach();
     }
 
     // Agent Factory

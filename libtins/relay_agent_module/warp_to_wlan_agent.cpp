@@ -190,7 +190,7 @@ void WarpToWlanAgent::set_out_interface(const char* out_interface)
 {
     this->out_interface.reset(new std::string(out_interface));
 
-    this->packet_sender.reset(new PacketSender(out_interface));
+    this->packet_sender.reset(new PacketSender(this->out_interface.get()->c_str()));
 }
 
 // Static

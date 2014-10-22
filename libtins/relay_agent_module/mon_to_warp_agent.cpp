@@ -139,7 +139,7 @@ void MonToWarpAgent::set_out_interface(const char* out_interface)
 {
     this->out_interface.reset(new std::string(out_interface));
 
-    this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(out_interface)));
+    this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(this->out_interface.get()->c_str())));
 }
 
 // Static methods

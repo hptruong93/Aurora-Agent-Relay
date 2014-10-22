@@ -29,10 +29,13 @@ sem_t CommsAgent::signal;
 mutex CommsAgent::message_lock;
 unique_ptr<string> CommsAgent::send_message;
 
-CommsAgent::CommsAgent(const char *init_out_interface, string init_send_port, string init_recv_port) 
-                : send_port(init_send_port), recv_port(init_recv_port), out_interface(nullptr), protocol_sender(nullptr)
+CommsAgent::CommsAgent(const char *init_out_interface, const char *init_send_port, const char *init_recv_port)
 {
-    sem_init(&CommsAgent::signal, 0, 0);
+    send_port = unique_ptr<const char>(init_send_port);
+    recv_port = unique_ptr<const char>(init_recv_port);
+
+    sem_init(&CommsAgent::signal, 0, 1);
+    sem_wait(&CommsAgent::signal);
     #ifndef TEST_JSON_DECODER
     if (init_out_interface != NULL)
     {
@@ -40,21 +43,6 @@ CommsAgent::CommsAgent(const char *init_out_interface, string init_send_port, st
         this->protocol_sender = unique_ptr<WARP_ProtocolSender>(new WARP_ProtocolSender(new PacketSender(init_out_interface)));
     }
 
-    // ZMQ settings
-    this->context = unique_ptr<zmq::context_t>(new zmq::context_t(1));
-    this->pub_socket = unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context.get()), ZMQ_PUB));
-    this->sub_socket = unique_ptr<zmq::socket_t>(new zmq::socket_t(*(this->context.get()), ZMQ_SUB));
-
-    string pub_address = "tcp://*:" + this->send_port;
-    this->pub_socket.get()->bind(pub_address.c_str());
-
-    string sub_address = "tcp://localhost:" + this->recv_port;
-    this->sub_socket.get()->connect(sub_address.c_str());
-
-    // Set socket options for receive socket
-    // Receive everything for now
-    this->sub_socket.get()->setsockopt(ZMQ_SUBSCRIBE, "", 0);
-    cout<<this->context.get()<<endl;
     #endif
 }
 
@@ -64,13 +52,48 @@ void CommsAgent::set_out_interface(const char *new_out_interface)
     this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(new_out_interface)));
 }
 
-void CommsAgent::spin()
+void CommsAgent::send_loop()
+{
+    zmq::message_t send_message(DEFAULT_MSG_SIZE);
+
+    zmq::context_t ctx(1);
+    zmq::socket_t pub_socket = zmq::socket_t(ctx, ZMQ_PUB);
+
+
+    string pub_address = string("tcp://*:") + string(this->send_port.get());
+    pub_socket.bind(pub_address.c_str());
+
+    while (true)
+    {
+        // cout<<"waiting..."<<endl;
+        sem_wait(&CommsAgent::signal);
+        CommsAgent::message_lock.lock();
+
+        snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, CommsAgent::send_message.get()->c_str());
+        send_message.rebuild();
+        pub_socket.send(send_message);
+
+        CommsAgent::message_lock.unlock();
+    }
+}
+
+void CommsAgent::recv_loop()
 {
     zmq::message_t received_msg;
 
+    zmq::context_t ctx(1);
+    zmq::socket_t sub_socket = zmq::socket_t(ctx, ZMQ_SUB);
+
+    string sub_address = string("tcp://localhost:") + string(this->recv_port.get());
+    sub_socket.connect(sub_address.c_str());
+
+    // Set socket options for receive socket
+    // Receive everything for now
+    sub_socket.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+
     while(true)
     {
-        this->sub_socket.get()->recv(&received_msg);
+        sub_socket.recv(&received_msg);
         // Do parsing
         this->parse_json((char*)received_msg.data());
     }
@@ -80,8 +103,6 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 {
     json_t *root;
     json_error_t error;
-
-    zmq::message_t send_message(1024);
 
     root = json_loads(json_string, 0, &error);
 
@@ -111,11 +132,17 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         // Send back the first data
         if (i == 0) {
             first_json = json_dumps(data, 0);
-            snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, first_json);
-            send_message.rebuild();
 
             #ifndef TEST_JSON_DECODER
-            this->pub_socket.get()->send(send_message);
+            
+            CommsAgent::message_lock.lock();
+
+            CommsAgent::send_message.reset(new string(first_json));
+
+            CommsAgent::message_lock.unlock();
+
+            sem_post(&CommsAgent::signal);
+
             #endif
 
             free(first_json);
