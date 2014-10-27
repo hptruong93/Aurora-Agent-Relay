@@ -3,12 +3,26 @@
 #This will bridge two interfaces and created a simple aurora slice for testing purpose
 
 if [ "$1" == "-c" ] || [ "$1" == "--clean" ]; then
+        shift
 	echo Clean up interfaces...
-	ifconfig ${viface1} down
-	ifconfig ${viface2} down
+
+        while [[ -n "$1" ]]; do
+                ifconfig ${1} down
+                shift
+        done
+
 	killall vethd
 	shift
-fi
+elif [ "$1" == "-cb" ] || [ "$1" == "--clean-bridge" ]; then
+        shift
+        echo Clean up bridges...
+        
+        while [[ -n "$1" ]]; do
+                ifconfig ${1} down
+                brctl delbr ${1}
+                shift
+        done
+else
 
 iface1=${1}
 shift
@@ -41,6 +55,12 @@ brctl delbr ${bridge_name}
 
 echo Creating new bridge
 brctl addbr ${bridge_name}
+
+echo Add interfaces
 brctl addif ${bridge_name} ${viface1}
 brctl addif ${bridge_name} ${viface2}
+
+echo Bringing bridge up
 ifconfig ${bridge_name} up
+
+fi

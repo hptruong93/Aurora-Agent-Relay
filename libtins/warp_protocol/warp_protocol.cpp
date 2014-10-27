@@ -17,15 +17,10 @@ namespace Tins {
     uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer, WARP_protocol::WARP_transmit_struct* transmit_result) {
         if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
             //For future usage???
-            uint8_t i;
-            for (i = 0; i < 6; i++) {
-                transmit_result->bssid[i] = (input_buffer + BSSID_INDEX)[i];
-            }
-            transmit_result->flag = input_buffer[FLAG_INDEX];
-            transmit_result->retry = input_buffer[RETRY_INDEX];
             transmit_result->payload_size = (input_buffer[DATA_LENGTH_MSB_INDEX] << 8) + (input_buffer[DATA_LENGTH_LSB_INDEX]);
-            return FRAGMENT_INFO_INDEX;
-        } else {
+            return HEADER_OFFSET + 2;
+        } else if (input_buffer[TYPE_INDEX] == TYPE_CONTROL) {
+            //Reply from WARP for a request of add bssid previously
             return 0;
         }
     }

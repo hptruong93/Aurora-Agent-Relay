@@ -42,28 +42,29 @@ string PDUTypeToString(int PDUTypeFlag) {
 }
 
 char* getInterface(Dot11::address_type addr) {
-    string address = addr.to_string();
-    cout << "Address is " << address << endl;
+    // string address = addr.to_string();
+    // cout << "Address is " << address << endl;
 
-    FILE *fp;
-    char *interface_name = (char*)malloc(64);
-    size_t interface_name_len = 0;
-    int c;
-    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
-    fp = popen(command.c_str(), "r");
+    // FILE *fp;
+    // char *interface_name = (char*)malloc(64);
+    // size_t interface_name_len = 0;
+    // int c;
+    // string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
+    // fp = popen(command.c_str(), "r");
 
-    while ((c = fgetc(fp)) != EOF)
-    {
-        if ((char) c == ' ')
-        {
-            break;
-        }
-        interface_name[interface_name_len++] = (char)c;
-    }
+    // while ((c = fgetc(fp)) != EOF)
+    // {
+    //     if ((char) c == ' ')
+    //     {
+    //         break;
+    //     }
+    //     interface_name[interface_name_len++] = (char)c;
+    // }
 
-    interface_name[interface_name_len] = '\0';
+    // interface_name[interface_name_len] = '\0';
 
-    return interface_name;
+    // return interface_name;
+    return "wlan0";
 }
 
 bool process(PDU &pkt) {
@@ -74,14 +75,11 @@ bool process(PDU &pkt) {
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
 
         WARP_protocol::WARP_transmit_struct transmit_result;
-        uint32_t fragment_index = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
+        uint32_t data_payload_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
 
-        receive_result receive_result;
-        packet_receive(warp_layer_buffer + fragment_index, transmit_result.payload_size, &receive_result);
-
-        if (receive_result.status == READY_TO_SEND) {
-            uint8_t* assembled_data = receive_result.packet_address;
-            uint32_t data_length = receive_result.info_address->length;
+        if (data_payload_length != 0) {//Has some data to forward to interface
+            uint8_t* assembled_data = warp_layer_buffer + data_payload_length;
+            uint32_t data_length = transmit_result.payload_size;
 
             //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
             Dot11 dot11(assembled_data, data_length);
@@ -90,7 +88,7 @@ bool process(PDU &pkt) {
                 //Put in radio tap and send to output
                 RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                 RadioTap to_send = header /  RawPDU(assembled_data, data_length);
-                // char* interface_name = getInterface(management_frame.addr3());
+                // char* interface_name = getInterface(management_frame.addr1());
 
                 // if (strlen(interface_name) > 0) {
                     sender->default_interface(mon_interface);
@@ -103,69 +101,10 @@ bool process(PDU &pkt) {
 
                 // free(interface_name);
 
-            } else if (type == Dot11::DATA) {
-                if (data_length <= 46) {//Magic?? 32 is the length of 802.11 header. 46 is min length of ethernet payload
-                    //Padd with 0??? WHY CAN'T I PADD THIS?
-                    // uint8_t i;
-                    // for (i = data_length; i < 46; i++) {
-                    //     assembled_data[i] = 0;
-                    // }
-                    // data_length = 46;
-                    return true;
-                }
-
-                Dot11Data data_frame(assembled_data, data_length);
-                
-                if (data_frame.inner_pdu()->pdu_type() == PDU::RAW) {
-                    RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
-                    RadioTap to_send = header /  RawPDU(assembled_data, data_length);
-
-                    char* interface_name = getInterface(data_frame.addr1());
-
-                    if (strlen(interface_name) > 0) {
-                        sender->default_interface(interface_name);
-                        sender->send(to_send);
-                        cout << "Sent 1 packet to " << interface_name << endl;
-                    } else {
-                        cout << "ERROR: no interface found for the destination hardware address: " 
-                                << data_frame.addr3().to_string() << endl;
-                    }
-
-                    free(interface_name);
-
-                } else {
-                    try {
-                        SNAP snap = data_frame.rfind_pdu<SNAP>();
-
-                        //Append ethernet frame then send. But from where and to where???
-                        EthernetII to_send = EthernetII(data_frame.addr3(), data_frame.addr2());
-                        to_send = to_send / (*(snap.inner_pdu()));
-                        to_send.payload_type(snap.eth_type());
-
-                        char* interface_name = getInterface(data_frame.addr1());
-
-                        if (strlen(interface_name) > 0) {
-                            sender->default_interface(interface_name);
-                            sender->send(to_send);
-                            cout << "Sent 1 packet to " << interface_name << endl;
-                        } else {
-                            cout << "ERROR: no interface found for the destination hardware address: " 
-                                    << data_frame.addr3().to_string() << endl;
-                        }
-
-                        free(interface_name);
-                    } catch (exception& e) {
-                        cout << "Snap not found. Not raw either. Payload is of type " << PDUTypeToString(data_frame.inner_pdu()->pdu_type()) << endl;
-                    }
-                }
-            } else if (type == Dot11::CONTROL) {
-                cout << "Drop control packet." << endl;    
             } else {
-                cout << "Invalid IEEE802.11 packet type..." << endl;
+                //Drop
             }
         }
-
-        free(receive_result.info_address);
     }
     return true;
 }
