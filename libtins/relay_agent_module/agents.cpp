@@ -85,6 +85,9 @@ int main(int argc, char *argv[])
         comms_send_thread.detach();
     }
 
+    // Need someways to set up warp to wlan & mon to warp
+    // TODO
+
     // Agent Factory
     string input_string;
 

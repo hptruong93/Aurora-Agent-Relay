@@ -44,14 +44,22 @@
 #define FRAGMENT_BYTE_OFFSET_LSB                      4
 
 //For type = control
-#define SUBTYPE_TRANSMISSION_CONTROL                  1
-#define SUBTYPE_MAC_ADDRESS_CONTROL                   2
+#define SUBTYPE_MAC_ADDRESS_CONTROL                   1
+#define SUBTYPE_TRANSMISSION_CONTROL                  2
 #define DISABLED_INDEX                                8
 #define TX_POWER_INDEX                                9
 #define CHANNEL_INDEX                                 10
 #define RATE_INDEX                                    11
 #define HW_MODE_INDEX                                 12
 
+// For type = mac adress control
+#define NOTHING_CODE                                  0
+#define MAC_ADD_CODE                                  1
+#define MAC_REMOVE_CODE                               32
+#define MAC_CLEAR_CODE                                33
+#define MAC_CHECK_IF_EXIST_CODE                       64
+#define MAC_EXISTED_CODE                              65
+#define MAC_NOT_EXISTED_CODE                          66
 
 #define DEFAULT_TRANSMIT_POWER                        0
 #define DEFAULT_TRANSMIT_RATE                         1

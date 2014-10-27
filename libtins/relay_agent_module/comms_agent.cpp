@@ -29,13 +29,15 @@ sem_t CommsAgent::signal;
 mutex CommsAgent::message_lock;
 unique_ptr<string> CommsAgent::send_message;
 
-CommsAgent::CommsAgent(const char *init_out_interface, const char *init_send_port, const char *init_recv_port)
+CommsAgent::CommsAgent(const char *init_in_interface, const char *init_out_interface, const char *init_send_port, const char *init_recv_port)
 {
-    send_port = unique_ptr<const char>(init_send_port);
-    recv_port = unique_ptr<const char>(init_recv_port);
+    send_port = unique_ptr<string>(new string(init_send_port));
+    recv_port = unique_ptr<string>(new string(init_recv_port));
 
+    // Consume the semaphore
     sem_init(&CommsAgent::signal, 0, 1);
     sem_wait(&CommsAgent::signal);
+
     #ifndef TEST_JSON_DECODER
     if (init_out_interface != NULL)
     {
@@ -49,7 +51,7 @@ CommsAgent::CommsAgent(const char *init_out_interface, const char *init_send_por
 void CommsAgent::set_out_interface(const char *new_out_interface)
 {
     this->out_interface.reset(new string(new_out_interface));
-    this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(new_out_interface)));
+    this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(this->out_interface.get()->c_str())));
 }
 
 void CommsAgent::send_loop()
@@ -60,7 +62,7 @@ void CommsAgent::send_loop()
     zmq::socket_t pub_socket = zmq::socket_t(ctx, ZMQ_PUB);
 
 
-    string pub_address = string("tcp://*:") + string(this->send_port.get());
+    string pub_address = string("tcp://*:") + string(this->send_port.get()->c_str());
     pub_socket.bind(pub_address.c_str());
 
     while (true)
@@ -84,7 +86,7 @@ void CommsAgent::recv_loop()
     zmq::context_t ctx(1);
     zmq::socket_t sub_socket = zmq::socket_t(ctx, ZMQ_SUB);
 
-    string sub_address = string("tcp://localhost:") + string(this->recv_port.get());
+    string sub_address = string("tcp://localhost:") + string(this->recv_port.get()->c_str());
     sub_socket.connect(sub_address.c_str());
 
     // Set socket options for receive socket
@@ -140,8 +142,6 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             CommsAgent::send_message.reset(new string(first_json));
 
             CommsAgent::message_lock.unlock();
-
-            sem_post(&CommsAgent::signal);
 
             #endif
 
@@ -202,6 +202,27 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         }
 
         // Parsing done
+
+        // Mac Address Control Packet
+        WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
+        mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
+        if (parse_mac(json_string_value(mac_addr), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
+        {
+            return ErrorCode::ERROR;
+        }
+        WARP_protocol *mac_add_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
+        this->protocol_sender.get()->send(*mac_add_packet, TYPE_CONTROL, SUBTYPE_MAC_ADDRESS_CONTROL);
+        delete mac_add_packet;
+
+        // Wait until WARP talks back
+        int error;
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)SYNC_OPS::MAC_ADD, 500)) == -1)
+        {
+            // TODO: Set error message to be sent back to Al's python code
+            return ErrorCode::ERROR;
+        }
+
+        // Transmission control packet
         WARP_protocol::WARP_transmission_control_struct transmission_cntrl_struct;
         transmission_cntrl_struct.disabled = (uint8_t) json_integer_value(disabled);
         transmission_cntrl_struct.tx_power = (uint8_t) json_integer_value(txpower);
@@ -228,14 +249,48 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         this->protocol_sender.get()->send(*packet, TYPE_CONTROL, SUBTYPE_TRANSMISSION_CONTROL);
         delete packet;
 
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)SYNC_OPS::TRANSMISSION_CNTRL, 500)) == -1)
+        {
+            // TODO: Set error message to be sent back to Al's python code
+            return ErrorCode::ERROR;
+        }
+
         #endif
     }
+
+    // Release the semaphore so that we can talk back to Al
+    sem_post(&CommsAgent::signal);
 
     json_decref(root);
 
     return ErrorCode::OK;
 }
 
+void CommsAgent::update_bssids(int operation_code, void* bssid)
+{
+    this->bssid_update_group_mux.lock();
+
+    for (int i = 0; i < this->bssid_update_group.size(); i++)
+    {
+        this->bssid_update_group[i]->sync(operation_code, bssid);
+    }
+
+    this->bssid_update_group_mux.unlock();
+}
+
+void CommsAgent::add_to_bssid_group(BssidNode* node)
+{
+    this->bssid_update_group_mux.lock();
+
+    this->bssid_update_group.push_back(node);
+
+    this->bssid_update_group_mux.unlock();
+}
+
+void CommsAgent::set_warp_to_wlan_agent(BssidNode* agent)
+{
+    this->warp_to_wlan_agent.reset(agent);
+}
 
 // Static variable init
 int AgentFactory::current_thread_id = 0;

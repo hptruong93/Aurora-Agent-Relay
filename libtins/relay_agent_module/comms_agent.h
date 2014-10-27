@@ -17,6 +17,7 @@
 #include <tins/tins.h>
 
 #include "relay_agent.h"
+#include "bssid_node.h"
 
 #define DEFAULT_MSG_SIZE                1024
 
@@ -42,25 +43,33 @@ namespace RelayAgents {
     };
 
     // Utility class
-    class CommsAgent {
-        std::unique_ptr<const char> send_port;
-        std::unique_ptr<const char> recv_port;
-        std::unique_ptr<std::string> out_interface;
-        std::unique_ptr<WARP_ProtocolSender> protocol_sender;
+    class CommsAgent : public RelayAgent {
+        std::unique_ptr<std::string> send_port;
+        std::unique_ptr<std::string> recv_port;
         std::unique_ptr<zmq::socket_t> pub_socket;
         std::unique_ptr<zmq::socket_t> sub_socket;
+        std::mutex mac_add_success_lock;
+        bool mac_add_success;
         public:
-            CommsAgent(const char *init_out_interface = NULL, const char *init_send_port = "5555", const char *init_recv_port = "5556");
+            CommsAgent(const char *init_in_interface = NULL, const char *init_out_interface = NULL, const char *init_send_port = "5555", const char *init_recv_port = "5556");
             ErrorCode parse_json(const char *json_string);
             void set_out_interface(const char *new_out_interface);
             void send_loop();
             void recv_loop();
+            void update_bssids(int operation_code, void* bssid);
+            void add_to_bssid_group(BssidNode* node);
+            void set_warp_to_wlan_agent(BssidNode* agent);
 
             // Used by zmq receiver to signal the send to send the first packet recieved
             // Back to the source
             static std::mutex message_lock;
             static std::unique_ptr<string> send_message;
             static sem_t signal;
+        private:
+            std::mutex bssid_update_group_mux;
+            std::mutex warp_to_wlan_agent_mux;
+            std::vector<BssidNode*> bssid_update_group;
+            std::unique_ptr<BssidNode> warp_to_wlan_agent;
     };
     
     // Receives command and initialize different agents

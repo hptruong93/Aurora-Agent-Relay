@@ -10,6 +10,7 @@
 #include <string>
 #include <exception>
 #include <vector>
+#include <time.h>
 
 #include "../revised_version/config.h"
 #include "../revised_version/util.h"
@@ -26,12 +27,18 @@ using namespace RelayAgents;
 
 WarpToWlanAgent::WarpToWlanAgent() : RelayAgent()
 {
-    
+    sem_init(&this->mac_add_sync, 0, 1);
+    sem_wait(&this->mac_add_sync);
+    sem_init(&this->transmission_sync, 0, 1);
+    sem_wait(&this->transmission_sync);
 }
 
 WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(init_packet_sender)
 {
-
+    sem_init(&this->mac_add_sync, 0, 1);
+    sem_wait(&this->mac_add_sync);
+    sem_init(&this->transmission_sync, 0, 1);
+    sem_wait(&this->transmission_sync);
 }
 
 bool WarpToWlanAgent::process(PDU &pkt)
@@ -191,6 +198,27 @@ void WarpToWlanAgent::set_out_interface(const char* out_interface)
     this->out_interface.reset(new std::string(out_interface));
 
     this->packet_sender.reset(new PacketSender(this->out_interface.get()->c_str()));
+}
+
+int WarpToWlanAgent::timed_sync(int opertaion_code, int timeout)
+{
+    SYNC_OPS op = (SYNC_OPS)opertaion_code;
+    struct timespec ts;
+    
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+    {
+        std::cout<<"ERROR: Failed to get current time."<<std::endl;
+        return -1;
+    }
+    ts.tv_sec += timeout;
+    
+    switch(op)
+    {
+        case SYNC_OPS::MAC_ADD:
+            return sem_timedwait(&this->mac_add_sync, &ts);
+        case SYNC_OPS::TRANSMISSION_CNTRL:
+            return sem_timedwait(&this->transmission_sync, &ts);
+    }
 }
 
 // Static

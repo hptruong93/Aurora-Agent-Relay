@@ -5,22 +5,6 @@
 */
 #include "mon_to_warp_agent.h"
 
-#include <stdio.h>
-#include <string>
-#include <exception>
-#include <vector>
-
-#include "../revised_version/config.h"
-#include "../revised_version/util.h"
-#include <tins/tins.h>
-#include "../send_receive_module/warp_protocol_sender.h"
-#include "../send_receive_module/fragment_receiver.h"
-#include "../warp_protocol/warp_protocol.h"
-
-using namespace Tins;
-using namespace Config;
-using namespace std;
-
 using namespace RelayAgents;
 
 MonToWarpAgent::MonToWarpAgent() : RelayAgent()
@@ -140,6 +124,33 @@ void MonToWarpAgent::set_out_interface(const char* out_interface)
     this->out_interface.reset(new std::string(out_interface));
 
     this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(this->out_interface.get()->c_str())));
+}
+
+int MonToWarpAgent::sync(int operation_code, void* addr)
+{
+    BSSID_OPS op = (BSSID_OPS)operation_code;
+    switch(op)
+    {
+        case BSSID_OPS::BSSID_ADD:
+            this->bssid_list_mutex.lock();
+            this->bssid_list.push_back(Dot11::address_type(string((char*)addr)));
+            this->bssid_list_mutex.unlock();
+            break;
+        case BSSID_OPS::BSSID_REMOVE:
+            string to_remove((char*)addr);
+            this->bssid_list_mutex.lock();
+            for(int i = 0; i < this->bssid_list.size(); i++)
+            {
+                if (this->bssid_list[i].to_string() == to_remove)
+                {
+                    this->bssid_list.erase(this->bssid_list.begin() + i);
+                    break;
+                }
+            }
+            break;
+    }
+
+    return 0;
 }
 
 // Static methods
