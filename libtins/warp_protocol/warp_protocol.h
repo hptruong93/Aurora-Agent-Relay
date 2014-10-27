@@ -22,15 +22,13 @@
 #define TYPE_TRANSMIT                                 1
 #define TYPE_CONTROL                                  2
 
+#define HEADER_OFFSET                                 2
 //For type = transmit
 #define SUBTYPE_MANGEMENT_TRANSMIT                    0
 #define SUBTYPE_DATA_TRANSMIT                         1
 
-#define BSSID_INDEX                                   2 //6 bytes following will be bssid
-#define FLAG_INDEX                                    8
-#define RETRY_INDEX                                   9
-#define DATA_LENGTH_MSB_INDEX                         10
-#define DATA_LENGTH_LSB_INDEX                         11
+#define DATA_LENGTH_MSB_INDEX                         2
+#define DATA_LENGTH_LSB_INDEX                         3
 
 //For fragment info
 #define FRAGMENT_INFO_INDEX                           12
