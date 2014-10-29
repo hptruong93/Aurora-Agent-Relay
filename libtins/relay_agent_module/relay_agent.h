@@ -62,6 +62,8 @@ namespace RelayAgents {
             std::unique_ptr<PacketSender> packet_sender;
             std::unique_ptr<std::string> in_interface;
             std::unique_ptr<std::string> out_interface;
+            vector<Dot11::address_type> bssid_list;
+            mutex bssid_list_mutex;
         private:
             void init(WARP_ProtocolSender* init_protocol_sender, PacketSender* init_packet_sender);
     };

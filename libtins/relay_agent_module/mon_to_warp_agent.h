@@ -39,8 +39,6 @@ namespace RelayAgents {
             // Static methods and constants
             static bool Is_Management_Frame(int type);
         private:
-            vector<Dot11::address_type> bssid_list;
-            mutex bssid_list_mutex;
     };
 }
 

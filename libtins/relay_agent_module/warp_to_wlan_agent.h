@@ -22,6 +22,7 @@ namespace RelayAgents {
             void run(vector<string> args);
             // override BssidNode
             int timed_sync(int operation_code, int timeout);
+            int sync(int operation_code, void* bssid);
             static char* get_interface_name(Dot11::address_type addr);
         private:
         	sem_t mac_add_sync;

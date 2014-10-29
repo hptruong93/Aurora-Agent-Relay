@@ -24,34 +24,14 @@ ErrorCode parse_mac(const char* origin, uint8_t dest[])
     return ErrorCode::OK;
 }
 
-// Static variable
-sem_t CommsAgent::signal;
-mutex CommsAgent::message_lock;
-unique_ptr<string> CommsAgent::send_message;
-
-CommsAgent::CommsAgent(const char *init_in_interface, const char *init_out_interface, const char *init_send_port, const char *init_recv_port)
+CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port)
 {
     send_port = unique_ptr<string>(new string(init_send_port));
     recv_port = unique_ptr<string>(new string(init_recv_port));
 
     // Consume the semaphore
-    sem_init(&CommsAgent::signal, 0, 1);
-    sem_wait(&CommsAgent::signal);
-
-    #ifndef TEST_JSON_DECODER
-    if (init_out_interface != NULL)
-    {
-        this->out_interface = unique_ptr<string>(new string(init_out_interface));
-        this->protocol_sender = unique_ptr<WARP_ProtocolSender>(new WARP_ProtocolSender(new PacketSender(init_out_interface)));
-    }
-
-    #endif
-}
-
-void CommsAgent::set_out_interface(const char *new_out_interface)
-{
-    this->out_interface.reset(new string(new_out_interface));
-    this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(this->out_interface.get()->c_str())));
+    sem_init(&this->signal, 0, 1);
+    sem_wait(&this->signal);
 }
 
 void CommsAgent::send_loop()
@@ -68,14 +48,14 @@ void CommsAgent::send_loop()
     while (true)
     {
         // cout<<"waiting..."<<endl;
-        sem_wait(&CommsAgent::signal);
-        CommsAgent::message_lock.lock();
+        sem_wait(&this->signal);
+        this->message_lock.lock();
 
-        snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, CommsAgent::send_message.get()->c_str());
+        snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, this->send_message.get()->c_str());
         send_message.rebuild();
         pub_socket.send(send_message);
 
-        CommsAgent::message_lock.unlock();
+        this->message_lock.unlock();
     }
 }
 
@@ -112,6 +92,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     {
         cout<<"ERROR: on line "<<error.line<<": "<<error.text<<endl;
 
+        this->set_error_msg();
         return ErrorCode::ERROR;
     }
 
@@ -121,6 +102,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         cout<<"ERROR: json root is not array"<<endl;
         json_decref(root);
 
+        this->set_error_msg();
         return ErrorCode::ERROR;
     }
 
@@ -137,11 +119,11 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
             #ifndef TEST_JSON_DECODER
             
-            CommsAgent::message_lock.lock();
+            this->message_lock.lock();
 
-            CommsAgent::send_message.reset(new string(first_json));
+            this->send_message.reset(new string(first_json));
 
-            CommsAgent::message_lock.unlock();
+            this->message_lock.unlock();
 
             #endif
 
@@ -153,6 +135,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt Json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -162,6 +145,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt mac address for json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -171,6 +155,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt channel for json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -180,6 +165,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt hwmode for json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -189,6 +175,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt txpower for json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -198,6 +185,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt disabled for json object at index "<<i<<endl;
             json_decref(root);
 
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -208,17 +196,19 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
         if (parse_mac(json_string_value(mac_addr), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
         {
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
         WARP_protocol *mac_add_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
-        this->protocol_sender.get()->send(*mac_add_packet, TYPE_CONTROL, SUBTYPE_MAC_ADDRESS_CONTROL);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_add_packet);
         delete mac_add_packet;
 
         // Wait until WARP talks back
         int error;
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)SYNC_OPS::MAC_ADD, 500)) == -1)
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, 500)) == -1)
         {
             // TODO: Set error message to be sent back to Al's python code
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -232,6 +222,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         if (parse_mac(json_string_value(mac_addr), transmission_cntrl_struct.bssid) != ErrorCode::OK)
         {
+            // TODO: Set error message to be sent back to Al's python code
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -245,13 +237,14 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         #else
 
-        WARP_protocol *packet = WARP_protocol::create_transmission_control(&transmission_cntrl_struct);
-        this->protocol_sender.get()->send(*packet, TYPE_CONTROL, SUBTYPE_TRANSMISSION_CONTROL);
-        delete packet;
+        WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(&transmission_cntrl_struct);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
+        delete transmission_packet;
 
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)SYNC_OPS::TRANSMISSION_CNTRL, 500)) == -1)
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, 500)) == -1)
         {
             // TODO: Set error message to be sent back to Al's python code
+            this->set_error_msg();
             return ErrorCode::ERROR;
         }
 
@@ -259,11 +252,18 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     }
 
     // Release the semaphore so that we can talk back to Al
-    sem_post(&CommsAgent::signal);
+    sem_post(&this->signal);
 
     json_decref(root);
 
     return ErrorCode::OK;
+}
+
+void CommsAgent::set_error_msg()
+{
+    this->message_lock.lock();
+    this->send_message.reset(new string("{ Failed: true }"));
+    this->message_lock.unlock();
 }
 
 void CommsAgent::update_bssids(int operation_code, void* bssid)

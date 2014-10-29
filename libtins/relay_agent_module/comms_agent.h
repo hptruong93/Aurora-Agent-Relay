@@ -43,7 +43,7 @@ namespace RelayAgents {
     };
 
     // Utility class
-    class CommsAgent : public RelayAgent {
+    class CommsAgent {
         std::unique_ptr<std::string> send_port;
         std::unique_ptr<std::string> recv_port;
         std::unique_ptr<zmq::socket_t> pub_socket;
@@ -51,25 +51,25 @@ namespace RelayAgents {
         std::mutex mac_add_success_lock;
         bool mac_add_success;
         public:
-            CommsAgent(const char *init_in_interface = NULL, const char *init_out_interface = NULL, const char *init_send_port = "5555", const char *init_recv_port = "5556");
+            CommsAgent(const char *init_send_port = "5555", const char *init_recv_port = "5556");
             ErrorCode parse_json(const char *json_string);
-            void set_out_interface(const char *new_out_interface);
             void send_loop();
             void recv_loop();
+            void set_error_msg();
+            // Bssid update
             void update_bssids(int operation_code, void* bssid);
             void add_to_bssid_group(BssidNode* node);
             void set_warp_to_wlan_agent(BssidNode* agent);
-
-            // Used by zmq receiver to signal the send to send the first packet recieved
-            // Back to the source
-            static std::mutex message_lock;
-            static std::unique_ptr<string> send_message;
-            static sem_t signal;
         private:
             std::mutex bssid_update_group_mux;
             std::mutex warp_to_wlan_agent_mux;
             std::vector<BssidNode*> bssid_update_group;
             std::unique_ptr<BssidNode> warp_to_wlan_agent;
+            // Used by zmq receiver to signal the send to send the first packet recieved
+            // Back to the source
+            std::mutex message_lock;
+            std::unique_ptr<string> send_message;
+            sem_t signal;
     };
     
     // Receives command and initialize different agents

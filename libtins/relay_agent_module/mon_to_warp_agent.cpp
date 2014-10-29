@@ -128,15 +128,15 @@ void MonToWarpAgent::set_out_interface(const char* out_interface)
 
 int MonToWarpAgent::sync(int operation_code, void* addr)
 {
-    BSSID_OPS op = (BSSID_OPS)operation_code;
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
     switch(op)
     {
-        case BSSID_OPS::BSSID_ADD:
+        case BSSID_NODE_OPS::BSSID_ADD:
             this->bssid_list_mutex.lock();
             this->bssid_list.push_back(Dot11::address_type(string((char*)addr)));
             this->bssid_list_mutex.unlock();
             break;
-        case BSSID_OPS::BSSID_REMOVE:
+        case BSSID_NODE_OPS::BSSID_REMOVE:
             string to_remove((char*)addr);
             this->bssid_list_mutex.lock();
             for(int i = 0; i < this->bssid_list.size(); i++)
