@@ -24,10 +24,11 @@ ErrorCode parse_mac(const char* origin, uint8_t dest[])
     return ErrorCode::OK;
 }
 
-CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port)
+CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port, const char *init_peer_ip_addr)
 {
     send_port = unique_ptr<string>(new string(init_send_port));
     recv_port = unique_ptr<string>(new string(init_recv_port));
+    peer_ip_addr = unique_ptr<string>(new string(init_peer_ip_addr));
 
     // Consume the semaphore
     sem_init(&this->signal, 0, 1);
@@ -42,7 +43,7 @@ void CommsAgent::send_loop()
     zmq::socket_t pub_socket = zmq::socket_t(ctx, ZMQ_PUB);
 
 
-    string pub_address = string("tcp://*:") + string(this->send_port.get()->c_str());
+    string pub_address = string("tcp://*:") + *this->send_port.get();
     pub_socket.bind(pub_address.c_str());
 
     while (true)
@@ -66,7 +67,7 @@ void CommsAgent::recv_loop()
     zmq::context_t ctx(1);
     zmq::socket_t sub_socket = zmq::socket_t(ctx, ZMQ_SUB);
 
-    string sub_address = string("tcp://localhost:") + string(this->recv_port.get()->c_str());
+    string sub_address = string("tcp://:") + *this->peer_ip_addr.get() + string(":") + *this->recv_port.get()->c_str();
     sub_socket.connect(sub_address.c_str());
 
     // Set socket options for receive socket

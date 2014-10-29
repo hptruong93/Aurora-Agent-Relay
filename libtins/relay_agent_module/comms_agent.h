@@ -46,12 +46,13 @@ namespace RelayAgents {
     class CommsAgent {
         std::unique_ptr<std::string> send_port;
         std::unique_ptr<std::string> recv_port;
+        std::unique_ptr<std::string> peer_ip_addr;
         std::unique_ptr<zmq::socket_t> pub_socket;
         std::unique_ptr<zmq::socket_t> sub_socket;
         std::mutex mac_add_success_lock;
         bool mac_add_success;
         public:
-            CommsAgent(const char *init_send_port = "5555", const char *init_recv_port = "5556");
+            CommsAgent(const char *init_send_port = "5555", const char *init_recv_port = "5556", const char *init_peer_ip_addr = "localhost");
             ErrorCode parse_json(const char *json_string);
             void send_loop();
             void recv_loop();

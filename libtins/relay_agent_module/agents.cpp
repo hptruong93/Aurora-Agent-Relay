@@ -64,10 +64,10 @@ int main(int argc, char *argv[])
 
     unique_ptr<CommsAgent> comms_agent;
 
-    if (argc < 3)
+    if (argc < 4)
     {
         // Comms Agent
-        comms_agent = unique_ptr<CommsAgent>(new CommsAgent("5555", "5556"));
+        comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
         comms_receive_thread.detach();
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     else
     {
         // Comms Agent
-        comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2]));
+        comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
         comms_receive_thread.detach();
