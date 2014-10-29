@@ -65,7 +65,7 @@ namespace RelayAgents {
             std::mutex bssid_update_group_mux;
             std::mutex warp_to_wlan_agent_mux;
             std::vector<BssidNode*> bssid_update_group;
-            std::unique_ptr<BssidNode> warp_to_wlan_agent;
+            std::shared_ptr<BssidNode> warp_to_wlan_agent;
             // Used by zmq receiver to signal the send to send the first packet recieved
             // Back to the source
             std::mutex message_lock;

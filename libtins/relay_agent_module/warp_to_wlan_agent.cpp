@@ -19,6 +19,8 @@
 #include "../send_receive_module/fragment_receiver.h"
 #include "../warp_protocol/warp_protocol.h"
 
+#include "test.h"
+
 using namespace Tins;
 using namespace Config;
 using namespace std;
@@ -138,6 +140,7 @@ void WarpToWlanAgent::set_out_interface(const char* out_interface)
 
 int WarpToWlanAgent::timed_sync(int opertaion_code, int timeout)
 {
+    #ifndef TEST_JSON_DECODER
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)opertaion_code;
     struct timespec ts;
     
@@ -155,10 +158,26 @@ int WarpToWlanAgent::timed_sync(int opertaion_code, int timeout)
         case BSSID_NODE_OPS::TRANSMISSION_CNTRL:
             return sem_timedwait(&this->transmission_sync, &ts);
     }
+    return 0;
+    #else
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)opertaion_code;
+    
+    switch(op)
+    {
+        case BSSID_NODE_OPS::MAC_ADD:
+            cout<<"Simulation: Waiting for WARP response for mac add..."<<endl;
+            return 0;
+        case BSSID_NODE_OPS::TRANSMISSION_CNTRL:
+            cout<<"Simulation: Waiting for WARP response for transmission control..."<<endl;
+            return 0;
+    }
+    return 0;
+    #endif
 }
 
 int WarpToWlanAgent::sync(int operation_code, void* data)
 {
+    #ifndef TEST_JSON_DECODER
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
     switch(op)
     {
@@ -171,6 +190,19 @@ int WarpToWlanAgent::sync(int operation_code, void* data)
     }
 
     return 0;
+    #else
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
+    switch(op)
+    {
+        case BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL:
+            cout<<"Simulation: Sending mac addr control packet..."<<endl;
+            return 0;
+        case BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL:
+            cout<<"Simulation: Sending transmission control packet..."<<endl;
+            return 0;
+    }
+    return 0;
+    #endif
 }
 
 // Static

@@ -67,7 +67,7 @@ void CommsAgent::recv_loop()
     zmq::context_t ctx(1);
     zmq::socket_t sub_socket = zmq::socket_t(ctx, ZMQ_SUB);
 
-    string sub_address = string("tcp://:") + *this->peer_ip_addr.get() + string(":") + *this->recv_port.get()->c_str();
+    string sub_address = string("tcp://") + *this->peer_ip_addr.get() + string(":") + *this->recv_port.get();
     sub_socket.connect(sub_address.c_str());
 
     // Set socket options for receive socket
@@ -228,15 +228,11 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             return ErrorCode::ERROR;
         }
 
-        #ifdef TEST_JSON_DECODER
-
         cout<<"Mac Address: "<<std::hex<<(int)transmission_cntrl_struct.bssid[0]<<":"<<(int)transmission_cntrl_struct.bssid[1]<<":"
                                 <<(int)transmission_cntrl_struct.bssid[2]<<":"<<(int)transmission_cntrl_struct.bssid[3]<<":"
                                 <<(int)transmission_cntrl_struct.bssid[4]<<":"
                                 <<(int)transmission_cntrl_struct.bssid[5]<<endl;
         cout<<"Channel: "<<(int)transmission_cntrl_struct.channel<<endl;
-
-        #else
 
         WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(&transmission_cntrl_struct);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
@@ -249,7 +245,6 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             return ErrorCode::ERROR;
         }
 
-        #endif
     }
 
     // Release the semaphore so that we can talk back to Al

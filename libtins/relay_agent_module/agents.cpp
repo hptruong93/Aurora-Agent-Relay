@@ -58,6 +58,8 @@ int main(int argc, char *argv[])
     #ifdef TEST_JSON_DECODER
 
     CommsAgent comms_agent;
+    WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
+    comms_agent.set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
     comms_agent.parse_json(SAMPLE_JSON_STRING);
 
     #else
