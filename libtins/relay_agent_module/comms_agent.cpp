@@ -259,7 +259,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 void CommsAgent::set_error_msg(const std::string& message)
 {
     this->message_lock.lock();
-    this->send_message.reset(new string("{ Successful: False,  message: \"" + message + "\"}"));
+    this->send_message.reset(new string("{ successful: False,  message: \"" + message + "\"}"));
     this->message_lock.unlock();
 }
 

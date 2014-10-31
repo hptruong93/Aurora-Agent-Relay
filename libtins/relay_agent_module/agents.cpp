@@ -70,6 +70,16 @@ int main(int argc, char *argv[])
     {
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
+
+        // set up warp to wlan & mon to warp
+        WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
+        warp_to_wlan->set_in_interface("eth1");
+        comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
+        MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
+        mon_to_warp->set_in_interface("hwsim0");
+        mon_to_warp->set_out_interface("eth0");
+        comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
         comms_receive_thread.detach();
@@ -79,14 +89,21 @@ int main(int argc, char *argv[])
     {
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
+
+        // set up warp to wlan & mon to warp
+        WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
+        warp_to_wlan->set_in_interface("eth1");
+        comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
+        MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
+        mon_to_warp->set_in_interface("hwsim0");
+        mon_to_warp->set_out_interface("eth0");
+        comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+    
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
         comms_receive_thread.detach();
         comms_send_thread.detach();
     }
-
-    // Need someways to set up warp to wlan & mon to warp
-    // TODO
 
     // Agent Factory
     string input_string;
