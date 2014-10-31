@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
         mon_to_warp->set_in_interface("hwsim0");
         mon_to_warp->set_out_interface("eth0");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
-    
+
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
         comms_receive_thread.detach();

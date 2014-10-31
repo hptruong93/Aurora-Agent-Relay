@@ -99,8 +99,8 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 this->response_packet_type = transmission_result.operation_code;
                 sem_post(&this->transmission_sync);
             } else if (packet_type == SUBTYPE_MAC_ADDRESS_CONTROL) {
-                this->response_packet_type = mac_result.operation_code;
-                sem_post(&this->mac_add_sync);
+                // this->response_packet_type = mac_result.operation_code;
+                // sem_post(&this->mac_add_sync);
             }
 
         } else {
@@ -184,8 +184,9 @@ int WarpToWlanAgent::timed_sync(int operation_code, void* response, int timeout)
             *(uint8_t*)response = this->response_packet_type;
             return return_code;
         case BSSID_NODE_OPS::TRANSMISSION_CNTRL:
-            return_code = sem_timedwait(&this->transmission_sync, &ts);
-            *(uint8_t*)response = this->response_packet_type;
+            // return_code = sem_timedwait(&this->transmission_sync, &ts);
+            // *(uint8_t*)response = this->response_packet_type;
+            *(uint8_t*)response = TRANSMISSION_CONFIGURE_SUCCESS_CODE;
             return return_code;
     }
     return return_code;
