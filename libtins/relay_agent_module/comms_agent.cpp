@@ -78,7 +78,7 @@ void CommsAgent::recv_loop()
     {
         sub_socket.recv(&received_msg);
         // Do parsing
-        this->parse_json((char*)received_msg.data());
+        this->parse_json((char*)(received_msg.data() + 4));
     }
 }
 
@@ -91,7 +91,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
     if (!root)
     {
-        if (strcmp(json_string, "111") == 0)
+        if (strcmp(json_string, "test") == 0)
         {
             // Test string
             this->set_msg("{ success: True }");
