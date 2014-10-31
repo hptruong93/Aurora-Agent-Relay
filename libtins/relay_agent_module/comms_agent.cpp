@@ -91,6 +91,13 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
     if (!root)
     {
+        if (strcmp(json_string, "111") == 0)
+        {
+            // Test string
+            this->set_msg("{ success: True }");
+            return ErrorCode::OK;
+        }
+
         cout<<"ERROR: on line "<<error.line<<": "<<error.text<<endl;
 
         this->set_error_msg("Error parsing the json object.");
@@ -260,6 +267,13 @@ void CommsAgent::set_error_msg(const std::string& message)
 {
     this->message_lock.lock();
     this->send_message.reset(new string("{ successful: False,  message: \"" + message + "\"}"));
+    this->message_lock.unlock();
+}
+
+void CommsAgent::set_msg(const std::string& message)
+{
+    this->message_lock.lock();
+    this->send_message.reset(new string(message));
     this->message_lock.unlock();
 }
 
