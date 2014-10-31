@@ -52,35 +52,59 @@ bool WarpToWlanAgent::process(PDU &pkt)
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
 
         WARP_protocol::WARP_transmit_struct transmit_result;
-        uint32_t data_payload_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
+        WARP_protocol::WARP_transmission_control_struct transmission_result;
+        WARP_protocol::WARP_mac_control_struct mac_result;
+        uint8_t packet_type = WARP_protocol::check_warp_layer_type(warp_layer_buffer);
+        uint32_t data_processed_length = 0;
 
-        if (data_payload_length != 0) {//Has some data to forward to interface
-            uint8_t* assembled_data = warp_layer_buffer + data_payload_length;
-            uint32_t data_length = transmit_result.payload_size;
+        switch(packet_type)
+        {
+            case TYPE_CONTROL:
+                data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
+                break;
+            case SUBTYPE_TRANSMISSION_CONTROL:
+                data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmission_result);
+                break;
+            case SUBTYPE_MAC_ADDRESS_CONTROL:
+                data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &mac_result);
+                break;
+        }
 
-            //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
-            Dot11 dot11(assembled_data, data_length);
-            auto type = dot11.type();
-            if (type == Dot11::MANAGEMENT) {
-                //Put in radio tap and send to output
-                RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
-                RadioTap to_send = header /  RawPDU(assembled_data, data_length);
-                // char* interface_name = getInterface(management_frame.addr1());
+        if (data_processed_length != 0) {//Has some data to forward to interface
+            if (packet_type == TYPE_CONTROL) {
+                uint8_t* assembled_data = warp_layer_buffer + data_processed_length;
+                uint32_t data_length = transmit_result.payload_size;
 
-                // if (strlen(interface_name) > 0) {
-                    this->packet_sender.get()->default_interface("hwsim0");
-                    this->packet_sender.get()->send(to_send);
-                    cout << "Sent 1 packet to " << "hwsim0" << endl;
-                // } else {
-                //     cout << "ERROR: no interface found for the destination hardware address: " 
-                //             << dot11.addr1().to_string() << endl;
-                // }
+                //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
+                Dot11 dot11(assembled_data, data_length);
+                auto type = dot11.type();
+                if (type == Dot11::MANAGEMENT) {
+                    //Put in radio tap and send to output
+                    RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
+                    RadioTap to_send = header /  RawPDU(assembled_data, data_length);
+                    // char* interface_name = getInterface(management_frame.addr1());
 
-                // free(interface_name);
+                    // if (strlen(interface_name) > 0) {
+                        this->packet_sender.get()->default_interface("hwsim0");
+                        this->packet_sender.get()->send(to_send);
+                        cout << "Sent 1 packet to " << "hwsim0" << endl;
+                    // } else {
+                    //     cout << "ERROR: no interface found for the destination hardware address: " 
+                    //             << dot11.addr1().to_string() << endl;
+                    // }
 
-            } else {
-                //Drop
+                    // free(interface_name);
+                }
+            } else if (packet_type == SUBTYPE_TRANSMISSION_CONTROL) {
+                this->response_packet_type = transmission_result.operation_code;
+                sem_post(&this->transmission_sync);
+            } else if (packet_type == SUBTYPE_MAC_ADDRESS_CONTROL) {
+                this->response_packet_type = mac_result.operation_code;
+                sem_post(&this->mac_add_sync);
             }
+
+        } else {
+                //Drop
         }
     }
 
@@ -138,10 +162,10 @@ void WarpToWlanAgent::set_out_interface(const char* out_interface)
     this->protocol_sender.reset(new WARP_ProtocolSender(new PacketSender(this->out_interface.get()->c_str())));
 }
 
-int WarpToWlanAgent::timed_sync(int opertaion_code, int timeout)
+int WarpToWlanAgent::timed_sync(int operation_code, void* response, int timeout)
 {
     #ifndef TEST_JSON_DECODER
-    BSSID_NODE_OPS op = (BSSID_NODE_OPS)opertaion_code;
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
     struct timespec ts;
     
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
@@ -150,17 +174,23 @@ int WarpToWlanAgent::timed_sync(int opertaion_code, int timeout)
         return -1;
     }
     ts.tv_sec += timeout;
+
+    int return_code = 0;
     
     switch(op)
     {
         case BSSID_NODE_OPS::MAC_ADD:
-            return sem_timedwait(&this->mac_add_sync, &ts);
+            return_code =  sem_timedwait(&this->mac_add_sync, &ts);
+            *(uint8_t*)response = this->response_packet_type;
+            return return_code;
         case BSSID_NODE_OPS::TRANSMISSION_CNTRL:
-            return sem_timedwait(&this->transmission_sync, &ts);
+            return_code = sem_timedwait(&this->transmission_sync, &ts);
+            *(uint8_t*)response = this->response_packet_type;
+            return return_code;
     }
-    return 0;
+    return return_code;
     #else
-    BSSID_NODE_OPS op = (BSSID_NODE_OPS)opertaion_code;
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
     
     switch(op)
     {

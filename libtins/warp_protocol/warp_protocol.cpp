@@ -13,14 +13,25 @@ using namespace std;
 #define RESERVED_FRAGMENT_ID                     255
 
 namespace Tins {
+    uint8_t WARP_protocol::check_warp_layer_type(uint8_t* input_buffer)
+    {
+        return input_buffer[TYPE_INDEX] <= TYPE_TRANSMIT ? input_buffer[TYPE_INDEX] : input_buffer[SUBTYPE_INDEX];
+    }
     
-    uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer, WARP_protocol::WARP_transmit_struct* transmit_result) {
+    uint32_t WARP_protocol::process_warp_layer(uint8_t* input_buffer,  void* result) {
         if (input_buffer[TYPE_INDEX] == TYPE_TRANSMIT) {
-            //For future usage???
-            transmit_result->payload_size = (input_buffer[DATA_LENGTH_MSB_INDEX] << 8) + (input_buffer[DATA_LENGTH_LSB_INDEX]);
+            ((WARP_protocol::WARP_transmit_struct*)result)->payload_size = (input_buffer[DATA_LENGTH_MSB_INDEX] << 8) + (input_buffer[DATA_LENGTH_LSB_INDEX]);
             return HEADER_OFFSET + 2;
         } else if (input_buffer[TYPE_INDEX] == TYPE_CONTROL) {
-            //Reply from WARP for a request of add bssid previously
+            switch(input_buffer[SUBTYPE_INDEX])
+            {
+                case SUBTYPE_MAC_ADDRESS_CONTROL:
+                    ((WARP_protocol::WARP_mac_control_struct*)result)->operation_code = input_buffer[OPERTAION_CODE_INDEX];
+                    return HEADER_OFFSET + 1;
+                case SUBTYPE_TRANSMISSION_CONTROL:
+                    ((WARP_protocol::WARP_transmission_control_struct*)result)->operation_code = input_buffer[TRANSMISSION_OPERATION_CODE_INDEX];
+                    return HEADER_OFFSET + 1;
+            }
             return 0;
         }
     }
@@ -53,6 +64,8 @@ namespace Tins {
         output->channel = DEFAULT_TRANSMISSION_CONTROL_CHANNEL;
         output->rate = DEFAULT_TRANSMISSION_CONTROL_RATE;
         output->hw_mode = DEFAULT_TRANSMISSION_CONTROL_HW_MODE;
+        output->operation_code = DEFAULT_TRNASMISSION_CONTROL_OPERATION_CODE;
+
         convert_mac(&(output->bssid[0]), bssid);
 
         return output;
@@ -125,8 +138,8 @@ namespace Tins {
         buffer[SUBTYPE_INDEX] = SUBTYPE_MAC_ADDRESS_CONTROL;
 
         //MAC control
-        buffer[2] = info->operation_code;
-        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 1, &(info->mac_address[0]), 6);
+        buffer[OPERTAION_CODE_INDEX] = info->operation_code;
+        memcpy(buffer + OPERTAION_CODE_INDEX + 1, &(info->mac_address[0]), 6);
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);
@@ -152,6 +165,7 @@ namespace Tins {
         buffer[CHANNEL_INDEX] = info->channel;
         buffer[RATE_INDEX] = info->rate;
         buffer[HW_MODE_INDEX] = info->hw_mode;
+        buffer[TRANSMISSION_OPERATION_CODE_INDEX] = info->operation_code;
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);

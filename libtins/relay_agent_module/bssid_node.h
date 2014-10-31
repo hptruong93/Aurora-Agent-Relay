@@ -20,7 +20,7 @@ class BssidNode
     public:
         virtual ~BssidNode() {};
         virtual int sync(int operation_code, void* data) { return 0; };
-        virtual int timed_sync(int operation_code, int timeout) { return 0; };
+        virtual int timed_sync(int operation_code, void* data, int timeout) { return 0; };
 };
 
 #endif

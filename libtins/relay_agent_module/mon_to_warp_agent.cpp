@@ -5,6 +5,8 @@
 */
 #include "mon_to_warp_agent.h"
 
+#include <algorithm>
+
 using namespace RelayAgents;
 
 MonToWarpAgent::MonToWarpAgent() : RelayAgent()
@@ -30,7 +32,7 @@ bool MonToWarpAgent::process(PDU &pkt)
             Dot11::address_type source = management_frame.addr2();
             Dot11::address_type dest = management_frame.addr1();
 
-            if (source == HOSTAPD || source == BROADCAST) {
+            if (source == HOSTAPD || source == BROADCAST || std::find(this->bssid_list.begin(), this->bssid_list.end(), source) != this->bssid_list.end()) {
                 //Add an ethernet frame and send over iface
                 //-----------------> Create WARP transmit info
                 WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();
@@ -47,7 +49,7 @@ bool MonToWarpAgent::process(PDU &pkt)
         } else if (innerPkt->pdu_type() == pkt.DOT11_DATA) {
             Dot11Data &dataPkt = innerPkt->rfind_pdu<Dot11Data>();
             Dot11::address_type source = dataPkt.addr2();
-            if(source == HOSTAPD || source == BROADCAST) {
+            if(source == HOSTAPD || source == BROADCAST || std::find(this->bssid_list.begin(), this->bssid_list.end(), source) != this->bssid_list.end()) {
                 //Add an ethernet frame and send over iface to warp
                 //-----------------> Create WARP transmit info
                 WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();

@@ -191,6 +191,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         }
 
         // Parsing done
+        uint8_t response;
 
         // Mac Address Control Packet
         WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
@@ -206,7 +207,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         // Wait until WARP talks back
         int error;
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, 500)) == -1)
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
+            || response == MAC_NOT_EXISTED_CODE)
         {
             // TODO: Set error message to be sent back to Al's python code
             this->set_error_msg();
@@ -220,6 +222,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         transmission_cntrl_struct.channel = (uint8_t) json_integer_value(channel);
         transmission_cntrl_struct.rate = 1;
         transmission_cntrl_struct.hw_mode = (uint8_t) json_integer_value(hwmode);
+        transmission_cntrl_struct.operation_code = TRANSMISSION_CONFIGURE_CODE;
 
         if (parse_mac(json_string_value(mac_addr), transmission_cntrl_struct.bssid) != ErrorCode::OK)
         {
@@ -238,7 +241,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
         delete transmission_packet;
 
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, 500)) == -1)
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500)) == -1
+            || response == TRANSMISSION_CONFIGURE_FAIL_CODE)
         {
             // TODO: Set error message to be sent back to Al's python code
             this->set_error_msg();

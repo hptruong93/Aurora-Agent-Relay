@@ -21,12 +21,13 @@ namespace RelayAgents {
             bool process(PDU &pkt);
             void run(vector<string> args);
             // override BssidNode
-            int timed_sync(int operation_code, int timeout);
+            int timed_sync(int operation_code, void* response, int timeout);
             int sync(int operation_code, void* bssid);
             static char* get_interface_name(Dot11::address_type addr);
         private:
         	sem_t mac_add_sync;
         	sem_t transmission_sync;
+            uint8_t response_packet_type;
     };   
 }
 

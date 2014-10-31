@@ -45,13 +45,23 @@
 #define FRAGMENT_BYTE_OFFSET_LSB                      4
 
 //For type = control
-#define SUBTYPE_MAC_ADDRESS_CONTROL                   1
-#define SUBTYPE_TRANSMISSION_CONTROL                  2
+#define SUBTYPE_MAC_ADDRESS_CONTROL                   4
+#define SUBTYPE_TRANSMISSION_CONTROL                  8
+
+// For type = transmission control
+#define TRANSMISSION_CONFIGURE_CODE                   1
+#define TRANSMISSION_VERIFY_CODE                      4
+#define TRANSMISSION_VERIFIED_CODE                    5
+#define TRANSMISSION_INCONSISTENT_CODE                6
+#define TRANSMISSION_CONFIGURE_SUCCESS_CODE           8
+#define TRANSMISSION_CONFIGURE_FAIL_CODE              16
+
 #define DISABLED_INDEX                                8
 #define TX_POWER_INDEX                                9
 #define CHANNEL_INDEX                                 10
 #define RATE_INDEX                                    11
 #define HW_MODE_INDEX                                 12
+#define TRANSMISSION_OPERATION_CODE_INDEX             13
 
 // For type = mac adress control
 #define NOTHING_CODE                                  0
@@ -61,6 +71,8 @@
 #define MAC_CHECK_IF_EXIST_CODE                       64
 #define MAC_EXISTED_CODE                              65
 #define MAC_NOT_EXISTED_CODE                          66
+
+#define OPERTAION_CODE_INDEX                          2
 
 #define DEFAULT_TRANSMIT_POWER                        0
 #define DEFAULT_TRANSMIT_RATE                         1
@@ -74,6 +86,7 @@
 #define DEFAULT_TRANSMISSION_CONTROL_CHANNEL          2
 #define DEFAULT_TRANSMISSION_CONTROL_RATE             1
 #define DEFAULT_TRANSMISSION_CONTROL_HW_MODE          0
+#define DEFAULT_TRNASMISSION_CONTROL_OPERATION_CODE   0
 
 namespace Tins {
 
@@ -111,11 +124,14 @@ namespace Tins {
             uint8_t channel;
             uint8_t rate;
             uint8_t hw_mode;
+            uint8_t operation_code;
         };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 
-        static uint32_t process_warp_layer(uint8_t* input_buffer, WARP_transmit_struct* transmit_result);
+        static uint8_t check_warp_layer_type(uint8_t* input_buffer);
+
+        static uint32_t process_warp_layer(uint8_t* input_buffer, void* transmit_result);
 
         static WARP_transmit_struct* get_default_transmit_struct(Tins::HWAddress<6> bssid = Config::HOSTAPD);
 
