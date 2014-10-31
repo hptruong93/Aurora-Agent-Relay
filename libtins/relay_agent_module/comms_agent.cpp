@@ -93,7 +93,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     {
         cout<<"ERROR: on line "<<error.line<<": "<<error.text<<endl;
 
-        this->set_error_msg();
+        this->set_error_msg("Error parsing the json object.");
         return ErrorCode::ERROR;
     }
 
@@ -103,7 +103,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         cout<<"ERROR: json root is not array"<<endl;
         json_decref(root);
 
-        this->set_error_msg();
+        this->set_error_msg("Error parsing the json object.");
         return ErrorCode::ERROR;
     }
 
@@ -136,7 +136,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt Json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -146,7 +146,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt mac address for json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -156,7 +156,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt channel for json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -166,7 +166,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt hwmode for json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -176,7 +176,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt txpower for json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -186,7 +186,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             cout<<"ERROR: Corrupt disabled for json object at index "<<i<<endl;
             json_decref(root);
 
-            this->set_error_msg();
+            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
@@ -198,7 +198,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
         if (parse_mac(json_string_value(mac_addr), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
         {
-            this->set_error_msg();
+            this->set_error_msg("Invalid mac address in json object.");
             return ErrorCode::ERROR;
         }
         WARP_protocol *mac_add_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
@@ -210,8 +210,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
             || response == MAC_NOT_EXISTED_CODE)
         {
-            // TODO: Set error message to be sent back to Al's python code
-            this->set_error_msg();
+            this->set_error_msg("WARP failed to add mac address, or the request timed out.");
             return ErrorCode::ERROR;
         }
 
@@ -226,8 +225,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         if (parse_mac(json_string_value(mac_addr), transmission_cntrl_struct.bssid) != ErrorCode::OK)
         {
-            // TODO: Set error message to be sent back to Al's python code
-            this->set_error_msg();
+            this->set_error_msg("Invalid mac address in json object.");
             return ErrorCode::ERROR;
         }
 
@@ -244,8 +242,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500)) == -1
             || response == TRANSMISSION_CONFIGURE_FAIL_CODE)
         {
-            // TODO: Set error message to be sent back to Al's python code
-            this->set_error_msg();
+            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
             return ErrorCode::ERROR;
         }
 
@@ -259,10 +256,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     return ErrorCode::OK;
 }
 
-void CommsAgent::set_error_msg()
+void CommsAgent::set_error_msg(const std::string& message)
 {
     this->message_lock.lock();
-    this->send_message.reset(new string("{ Failed: true }"));
+    this->send_message.reset(new string("{ Successful: False,  message: \"" + message + "\"}"));
     this->message_lock.unlock();
 }
 
