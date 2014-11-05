@@ -12,6 +12,7 @@ enum BSSID_NODE_OPS
     SEND_TRANSMISSION_CNTRL,
     // Synchronous Warp protocol
     MAC_ADD,
+    MAC_REMOVE,
     TRANSMISSION_CNTRL
 };
 

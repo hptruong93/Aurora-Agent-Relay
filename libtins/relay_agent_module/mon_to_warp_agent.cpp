@@ -149,6 +149,7 @@ int MonToWarpAgent::sync(int operation_code, void* addr)
                     break;
                 }
             }
+            this->bssid_list_mutex.unlock();
             break;
     }
 

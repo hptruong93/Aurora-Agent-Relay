@@ -29,16 +29,16 @@ using namespace RelayAgents;
 
 WarpToWlanAgent::WarpToWlanAgent() : RelayAgent()
 {
-    sem_init(&this->mac_add_sync, 0, 1);
-    sem_wait(&this->mac_add_sync);
+    sem_init(&this->mac_control_sync, 0, 1);
+    sem_wait(&this->mac_control_sync);
     sem_init(&this->transmission_sync, 0, 1);
     sem_wait(&this->transmission_sync);
 }
 
 WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(init_packet_sender)
 {
-    sem_init(&this->mac_add_sync, 0, 1);
-    sem_wait(&this->mac_add_sync);
+    sem_init(&this->mac_control_sync, 0, 1);
+    sem_wait(&this->mac_control_sync);
     sem_init(&this->transmission_sync, 0, 1);
     sem_wait(&this->transmission_sync);
 }
@@ -99,8 +99,8 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 this->response_packet_type = transmission_result.operation_code;
                 sem_post(&this->transmission_sync);
             } else if (packet_type == SUBTYPE_MAC_ADDRESS_CONTROL) {
-                // this->response_packet_type = mac_result.operation_code;
-                // sem_post(&this->mac_add_sync);
+                this->response_packet_type = mac_result.operation_code;
+                sem_post(&this->mac_control_sync);
             }
 
         } else {
@@ -180,7 +180,8 @@ int WarpToWlanAgent::timed_sync(int operation_code, void* response, int timeout)
     switch(op)
     {
         case BSSID_NODE_OPS::MAC_ADD:
-            return_code =  sem_timedwait(&this->mac_add_sync, &ts);
+        case BSSID_NODE_OPS::MAC_REMOVE:
+            return_code =  sem_timedwait(&this->mac_control_sync, &ts);
             *(uint8_t*)response = this->response_packet_type;
             return return_code;
         case BSSID_NODE_OPS::TRANSMISSION_CNTRL:

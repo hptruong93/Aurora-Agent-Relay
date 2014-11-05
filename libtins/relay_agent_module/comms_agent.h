@@ -21,12 +21,20 @@
 
 #define DEFAULT_MSG_SIZE                1024
 
-// Agent parameters
-#define MAC_ADDRESS                     "macaddr"
-#define CHANNEL                         "channel"
-#define HW_MODE                         "hwmode"
-#define TX_POWER                        "txpower"
-#define DISABLED                        "disabled"
+// Command types from received json object
+#define RADIO_SET_CMD                   "_radio_set_command"
+#define RADIO_BULK_SET_CMD              "_bulk_radio_set_command"
+#define UCI_DELETE_SECTION              "_uci_delete_section_name"
+#define UCI_DELETE_BSS                  "_uci_delete_bss_index"
+
+// Json parameters
+#define JSON_COMMAND                    "command"
+#define JSON_CHANGES                    "changes"
+#define JSON_MAC_ADDRESS                "macaddr"
+#define JSON_CHANNEL                    "channel"
+#define JSON_HW_MODE                    "hwmode"
+#define JSON_TX_POWER                   "txpower"
+#define JSON_DISABLED                   "disabled"
 
 // Command for factory
 #define WLAN_TO_WARP                    "wlan_to_warp"

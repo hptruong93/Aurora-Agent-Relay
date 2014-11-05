@@ -25,7 +25,7 @@ namespace RelayAgents {
             int sync(int operation_code, void* bssid);
             static char* get_interface_name(Dot11::address_type addr);
         private:
-        	sem_t mac_add_sync;
+        	sem_t mac_control_sync;
         	sem_t transmission_sync;
             uint8_t response_packet_type;
     };   

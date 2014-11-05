@@ -104,157 +104,271 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         return ErrorCode::ERROR;
     }
 
-    // Check if is array
-    if (!json_is_array(root))
+    // Set response message
+    this->set_msg(string(json_string));
+
+    // Test if root is a valid json object
+    if (!json_is_object(root))
     {
-        cout<<"ERROR: json root is not array"<<endl;
+        cout << "ERROR: root is not a json object." <<endl;
+        this->set_error_msg("Error parsing the json object.");
         json_decref(root);
 
-        this->set_error_msg("Error parsing the json object.");
         return ErrorCode::ERROR;
     }
 
-    char *first_json;
-
-    for(int i = 0; i < json_array_size(root); i++)
+    // Get command type
+    json_t *command = json_object_get(root, JSON_COMMAND);
+    if (!json_is_string(command))
     {
-        json_t *data, *mac_addr, *channel, *hwmode, *txpower, *disabled;
-
-        data = json_array_get(root, i);
-        // Send back the first data
-        if (i == 0) {
-            first_json = json_dumps(data, 0);
-
-            #ifndef TEST_JSON_DECODER
-            
-            this->message_lock.lock();
-
-            this->send_message.reset(new string(first_json));
-
-            this->message_lock.unlock();
-
-            #endif
-
-            free(first_json);
-        }
-
-        if (!json_is_object(data))
+        cout << "ERROR: command is not a string." <<endl;
+        this->set_error_msg("Error parsing the json object.");
+        if (command != NULL)
         {
-            cout<<"ERROR: Corrupt Json object at index "<<i<<endl;
+            json_decref(command);
+        }
+        json_decref(root);
+
+        return ErrorCode::ERROR;
+    }
+
+    // Used for response messages
+    uint8_t response;
+
+    // Parse command
+    const char *command_str = json_string_value(command);
+    json_decref(command);
+
+    if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
+        strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
+    {
+        // Command string not useful any more
+        free((char*)command_str);
+        // Get changes object
+        json_t *changes = json_object_get(root, JSON_CHANGES);
+        if (!json_is_object(changes))
+        {
+            cout << "ERROR: no valid changes object found." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+            if (changes != NULL)
+            {
+                json_decref(changes);
+            }
             json_decref(root);
 
-            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
-        mac_addr = json_object_get(data, MAC_ADDRESS);
-        if (!json_is_string(mac_addr))
+        // Parse the changes
+        json_t *parameters, *bssid;
+        bssid = json_object_get(changes, JSON_MAC_ADDRESS);
+        if (!json_is_string(bssid))
         {
-            cout<<"ERROR: Corrupt mac address for json object at index "<<i<<endl;
+            cout << "ERROR: bssid is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+            if (bssid != NULL)
+            {
+                json_decref(changes);
+            }
             json_decref(root);
 
-            this->set_error_msg("Error parsing the json object.");
             return ErrorCode::ERROR;
         }
 
-        channel = json_object_get(data, CHANNEL);
-        if (!json_is_integer(channel))
-        {
-            cout<<"ERROR: Corrupt channel for json object at index "<<i<<endl;
-            json_decref(root);
-
-            this->set_error_msg("Error parsing the json object.");
-            return ErrorCode::ERROR;
-        }
-
-        hwmode = json_object_get(data, HW_MODE);
-        if (!json_is_integer(hwmode))
-        {
-            cout<<"ERROR: Corrupt hwmode for json object at index "<<i<<endl;
-            json_decref(root);
-
-            this->set_error_msg("Error parsing the json object.");
-            return ErrorCode::ERROR;
-        }
-
-        txpower = json_object_get(data, TX_POWER);
-        if (!json_is_integer(txpower))
-        {
-            cout<<"ERROR: Corrupt txpower for json object at index "<<i<<endl;
-            json_decref(root);
-
-            this->set_error_msg("Error parsing the json object.");
-            return ErrorCode::ERROR;
-        }
-
-        disabled = json_object_get(data, DISABLED);
-        if (!json_is_integer(disabled))
-        {
-            cout<<"ERROR: Corrupt disabled for json object at index "<<i<<endl;
-            json_decref(root);
-
-            this->set_error_msg("Error parsing the json object.");
-            return ErrorCode::ERROR;
-        }
-
-        // Parsing done
-        uint8_t response;
-
-        // Mac Address Control Packet
+        // Bssid parsing and send mac address control protocol
         WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
         mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
-        if (parse_mac(json_string_value(mac_addr), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
+        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
         {
+            json_decref(bssid);
+            json_decref(root);
+
+            cout << "ERROR: invalid bssid format." << endl;
             this->set_error_msg("Invalid mac address in json object.");
             return ErrorCode::ERROR;
         }
+
+        // Parsing done. We can send the mac address control now
         WARP_protocol *mac_add_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_add_packet);
-        delete mac_add_packet;
 
         // Wait until WARP talks back
         int error;
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
             || response == MAC_NOT_EXISTED_CODE)
         {
+            delete mac_add_packet;
+            json_decref(bssid);
+            json_decref(root);
+
+            cout << "ERROR: WARP failed to add mac address, or the request timed out." << endl;
             this->set_error_msg("WARP failed to add mac address, or the request timed out.");
             return ErrorCode::ERROR;
         }
 
-        // Transmission control packet
-        WARP_protocol::WARP_transmission_control_struct transmission_cntrl_struct;
-        transmission_cntrl_struct.disabled = (uint8_t) json_integer_value(disabled);
-        transmission_cntrl_struct.tx_power = (uint8_t) json_integer_value(txpower);
-        transmission_cntrl_struct.channel = (uint8_t) json_integer_value(channel);
-        transmission_cntrl_struct.rate = 1;
-        transmission_cntrl_struct.hw_mode = (uint8_t) json_integer_value(hwmode);
-        transmission_cntrl_struct.operation_code = TRANSMISSION_CONFIGURE_CODE;
+        // Mac address successfully added by WARP
+        delete mac_add_packet;
 
-        if (parse_mac(json_string_value(mac_addr), transmission_cntrl_struct.bssid) != ErrorCode::OK)
+        // Start constructing transmission control
+        WARP_protocol::WARP_transmission_control_struct *transmission_control = WARP_protocol::get_default_transmission_control_struct();
+        // We know by this point Bssid is valid both in value and format, so no error detection here
+        parse_mac(json_string_value(bssid), transmission_control->bssid);
+
+        // Parsing the changes parameters
+        parameters = json_object_get(changes, JSON_CHANNEL);
+        if (!json_is_integer(parameters))
         {
-            this->set_error_msg("Invalid mac address in json object.");
+            cout << "ERROR: invalid channel format." << endl;
+            if (parameters != NULL)
+            {
+                json_decref(parameters);
+            }
+            free(transmission_control);
+            json_decref(root);
+
             return ErrorCode::ERROR;
         }
+        transmission_control->channel = (uint8_t)json_integer_value(parameters);
+        json_decref(parameters);
 
-        cout<<"Mac Address: "<<std::hex<<(int)transmission_cntrl_struct.bssid[0]<<":"<<(int)transmission_cntrl_struct.bssid[1]<<":"
-                                <<(int)transmission_cntrl_struct.bssid[2]<<":"<<(int)transmission_cntrl_struct.bssid[3]<<":"
-                                <<(int)transmission_cntrl_struct.bssid[4]<<":"
-                                <<(int)transmission_cntrl_struct.bssid[5]<<endl;
-        cout<<"Channel: "<<(int)transmission_cntrl_struct.channel<<endl;
+        parameters = json_object_get(changes, JSON_HW_MODE);
+        if (!json_is_integer(parameters))
+        {
+            cout << "ERROR: invalid hw_mode format." << endl;
+            if (parameters != NULL)
+            {
+                json_decref(parameters);
+            }
+            free(transmission_control);
+            json_decref(root);
 
-        WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(&transmission_cntrl_struct);
+            return ErrorCode::ERROR;
+        }
+        transmission_control->hw_mode = (uint8_t)json_integer_value(parameters);
+        json_decref(parameters);
+
+        parameters = json_object_get(changes, JSON_TX_POWER);
+        if (!json_is_integer(parameters))
+        {
+            cout << "ERROR: invalid tx_power format." << endl;
+            if (parameters != NULL)
+            {
+                json_decref(parameters);
+            }
+            free(transmission_control);
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+        transmission_control->tx_power = (uint8_t)json_integer_value(parameters);
+        json_decref(parameters);
+
+        parameters = json_object_get(changes, JSON_DISABLED);
+        if (!json_is_integer(parameters))
+        {
+            cout << "ERROR: invalid disabled format." << endl;
+            if (parameters != NULL)
+            {
+                json_decref(parameters);
+            }
+            free(transmission_control);
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+        transmission_control->disabled = (uint8_t)json_integer_value(parameters);
+        json_decref(parameters);
+
+        // Done! Time to send the cyka
+        WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(transmission_control);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
-        delete transmission_packet;
 
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500)) == -1
             || response == TRANSMISSION_CONFIGURE_FAIL_CODE)
         {
+            delete transmission_packet;
+            free(transmission_control);
+            json_decref(root);
+
+            cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
             this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
             return ErrorCode::ERROR;
         }
 
-    }
+        // Configuration successful!!
+        delete transmission_packet;
+        free(transmission_control);
 
+        // Update corresponding bssid nodes
+        this->update_bssids(BSSID_NODE_OPS::BSSID_ADD, (void*)json_string_value(bssid));
+        json_decref(bssid);
+    }
+    else if (strcmp(command_str, UCI_DELETE_SECTION) == 0 ||
+                strcmp(command_str, UCI_DELETE_BSS) == 0)
+    {
+        free((char*)command_str);
+
+        // Get Bssid
+        json_t *bssid;
+        bssid = json_object_get(root, JSON_MAC_ADDRESS);
+        if (!json_is_string(bssid))
+        {
+            cout << "ERROR: bssid is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+            if (bssid != NULL)
+            {
+                json_decref(bssid);
+            }
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        // Construct mac address control packet to remove mac address
+        WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
+        mac_address_cntrl_struct.operation_code = MAC_REMOVE_CODE;
+
+        // Parse Bssid
+        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
+        {
+            json_decref(bssid);
+            json_decref(root);
+
+            cout << "ERROR: invalid bssid format." << endl;
+            this->set_error_msg("Invalid mac address in json object.");
+            return ErrorCode::ERROR;
+        }
+
+        // Parsing done. Time to send...
+        WARP_protocol *mac_remove_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_remove_packet);
+
+        uint8_t response;
+        int error;
+        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_REMOVE, &response, 500)) == -1
+            || response == MAC_EXISTED_CODE)
+        {
+            delete mac_remove_packet;
+            json_decref(root);
+
+            cout<< "ERROR: WARP failed to remove mac address, or the request timed out." << endl;
+            this->set_error_msg("WARP failed to remove mac address, or the request timed out.");
+            return ErrorCode::ERROR;
+        }
+
+        // Configuration succesful!
+        delete mac_remove_packet;
+
+        // Update corresponding bssid nodes
+        this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
+        json_decref(bssid);
+    }
+    else 
+    {
+        // Command not recognized
+        free((char*)command_str);
+    }
+    
     // Release the semaphore so that we can talk back to Al
     sem_post(&this->signal);
 
