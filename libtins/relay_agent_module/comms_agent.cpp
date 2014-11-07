@@ -233,7 +233,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         // Wait until WARP talks back
         int error;
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
-            || response == MAC_NOT_EXISTED_CODE)
+            || response == MAC_ADD_CODE)
         {
             delete mac_add_packet;
             json_decref(bssid);
@@ -384,7 +384,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         uint8_t response;
         int error;
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_REMOVE, &response, 500)) == -1
-            || response == MAC_EXISTED_CODE)
+            || response != MAC_REMOVE_CODE)
         {
             delete mac_remove_packet;
             json_decref(root);
