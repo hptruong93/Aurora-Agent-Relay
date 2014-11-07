@@ -56,12 +56,13 @@
 #define TRANSMISSION_CONFIGURE_SUCCESS_CODE           8
 #define TRANSMISSION_CONFIGURE_FAIL_CODE              16
 
-#define DISABLED_INDEX                                8
-#define TX_POWER_INDEX                                9
-#define CHANNEL_INDEX                                 10
-#define RATE_INDEX                                    11
-#define HW_MODE_INDEX                                 12
-#define TRANSMISSION_OPERATION_CODE_INDEX             13
+#define NUM_ELEMENT_INDEX                             2
+#define TRANSMISSION_OPERATION_CODE_INDEX             3
+#define DISABLED_INDEX                                10
+#define TX_POWER_INDEX                                11
+#define CHANNEL_INDEX                                 12
+#define RATE_INDEX                                    13
+#define HW_MODE_INDEX                                 14
 
 // For type = mac adress control
 #define NOTHING_CODE                                  0
@@ -118,6 +119,7 @@ namespace Tins {
         };
 
         struct WARP_transmission_control_struct {
+            uint8_t total_num_element;
             uint8_t bssid[6];
             uint8_t disabled;
             uint8_t tx_power;

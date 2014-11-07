@@ -59,6 +59,7 @@ namespace Tins {
     WARP_protocol::WARP_transmission_control_struct* WARP_protocol::get_default_transmission_control_struct(Tins::HWAddress<6> bssid) {
         WARP_transmission_control_struct* output = (WARP_transmission_control_struct*) calloc(sizeof(WARP_transmission_control_struct), 0);
 
+        output->total_num_element = 1;
         output->disabled = DEFAULT_TRANSMISSION_CONTROL_DISABLED;
         output->tx_power = DEFAULT_TRANSMISSION_CONTROL_TX_POWER;
         output->channel = DEFAULT_TRANSMISSION_CONTROL_CHANNEL;
@@ -157,15 +158,16 @@ namespace Tins {
         //Header
         buffer[TYPE_INDEX] = TYPE_CONTROL;
         buffer[SUBTYPE_INDEX] = SUBTYPE_TRANSMISSION_CONTROL;
+        buffer[NUM_ELEMENT_INDEX] = info->total_num_element;
+        buffer[TRANSMISSION_OPERATION_CODE_INDEX] = info->operation_code;
 
         //Control
-        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH, &(info->bssid[0]), 6);
+        memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 2, &(info->bssid[0]), 6);
         buffer[DISABLED_INDEX] = info->disabled;
         buffer[TX_POWER_INDEX] = info->tx_power;
         buffer[CHANNEL_INDEX] = info->channel;
         buffer[RATE_INDEX] = info->rate;
         buffer[HW_MODE_INDEX] = info->hw_mode;
-        buffer[TRANSMISSION_OPERATION_CODE_INDEX] = info->operation_code;
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);
