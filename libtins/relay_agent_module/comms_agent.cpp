@@ -123,6 +123,7 @@ void CommsAgent::parse_loop()
 
 ErrorCode CommsAgent::parse_json(const char *json_string)
 {
+    cout<<json_string<<endl;
     json_t *root;
     json_error_t error;
 
@@ -176,13 +177,11 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
     // Parse command
     const char *command_str = json_string_value(command);
-    json_decref(command);
 
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
     {
-        // Command string not useful any more
-        free((char*)command_str);
+        json_decref(command);
         // Get changes object
         json_t *changes = json_object_get(root, JSON_CHANGES);
         if (!json_is_object(changes))
@@ -201,7 +200,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         // Parse the changes
         json_t *parameters, *bssid;
         bssid = json_object_get(changes, JSON_MAC_ADDRESS);
-        if (!json_is_string(bssid))
+        if (!json_is_string(bssid) )
         {
             cout << "ERROR: bssid is not a valid string." <<endl;
             this->set_error_msg("Error parsing the json object.");
@@ -346,8 +345,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     else if (strcmp(command_str, UCI_DELETE_SECTION) == 0 ||
                 strcmp(command_str, UCI_DELETE_BSS) == 0)
     {
-        free((char*)command_str);
-
+        json_decref(command);
         // Get Bssid
         json_t *bssid;
         bssid = json_object_get(root, JSON_MAC_ADDRESS);
@@ -406,7 +404,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     else 
     {
         // Command not recognized
-        free((char*)command_str);
+        json_decref(command);
     }
     
     // Release the semaphore so that we can talk back to Al
