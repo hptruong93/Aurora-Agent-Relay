@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
         // set up warp to wlan & mon to warp
         WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
         warp_to_wlan->set_in_interface("eth0");
+	warp_to_wlan->set_out_interface("eth0");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
         mon_to_warp->set_in_interface("hwsim0");
@@ -93,6 +94,7 @@ int main(int argc, char *argv[])
         // set up warp to wlan & mon to warp
         WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
         warp_to_wlan->set_in_interface("eth0");
+        warp_to_wlan->set_out_interface("eth0");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
         mon_to_warp->set_in_interface("hwsim0");
