@@ -24,6 +24,16 @@ ErrorCode parse_mac(const char* origin, uint8_t dest[])
     return ErrorCode::OK;
 }
 
+uint8_t parse_hwmode(std::string& hwmode)
+{
+    uint8_t a = hwmode.find('a') == string::npos ? 0x00 : 0x08;
+    uint8_t b = hwmode.find('b') == string::npos ? 0x00 : 0x04;
+    uint8_t g = hwmode.find('g') == string::npos ? 0x00 : 0x02;
+    uint8_t n = hwmode.find('n') == string::npos ? 0x00 : 0x01;
+
+    return a | b | g | n;
+}
+
 CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port, const char *init_peer_ip_addr)
 {
     send_port = unique_ptr<string>(new string(init_send_port));
@@ -33,6 +43,10 @@ CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port, c
     // Consume the semaphore
     sem_init(&this->signal, 0, 1);
     sem_wait(&this->signal);
+
+    // Consume new command semaphore
+    sem_init(&this->new_command, 0, 1);
+    sem_wait(&this->new_command);
 }
 
 void CommsAgent::send_loop()
@@ -77,8 +91,33 @@ void CommsAgent::recv_loop()
     while(true)
     {
         sub_socket.recv(&received_msg);
-        // Do parsing
-        this->parse_json((char*)(received_msg.data() + 4));
+        // Add to command queue
+        this->command_queue_lock.lock();
+        this->command_queue.push(string((char*)(received_msg.data() + 4)));
+        this->command_queue_lock.unlock();
+
+        sem_post(&this->new_command);
+    }
+}
+
+void CommsAgent::parse_loop()
+{
+    while (true)
+    {
+        sem_wait(&this->new_command);
+
+        while(this->command_queue.size() > 0)
+        {
+            this->command_queue_lock.lock();
+            string next_command = this->command_queue.front();
+            this->command_queue_lock.unlock();
+
+            this->parse_json(next_command.c_str());
+
+            this->command_queue_lock.lock();
+            this->command_queue.pop();
+            this->command_queue_lock.unlock();
+        }
     }
 }
 
@@ -232,7 +271,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         json_decref(parameters);
 
         parameters = json_object_get(changes, JSON_HW_MODE);
-        if (!json_is_integer(parameters))
+        if (!json_is_string(parameters))
         {
             cout << "ERROR: invalid hw_mode format." << endl;
             if (parameters != NULL)
@@ -244,7 +283,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
             return ErrorCode::ERROR;
         }
-        transmission_control->hw_mode = (uint8_t)json_integer_value(parameters);
+        string hwmode_str(json_string_value(parameters));
+        transmission_control->hw_mode = parse_hwmode(hwmode_str);
         json_decref(parameters);
 
         parameters = json_object_get(changes, JSON_TX_POWER);

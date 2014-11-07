@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <queue>
 #include <map>
 #include <mutex>
 #include <semaphore.h>
@@ -62,8 +63,11 @@ namespace RelayAgents {
         public:
             CommsAgent(const char *init_send_port = "5555", const char *init_recv_port = "5556", const char *init_peer_ip_addr = "localhost");
             ErrorCode parse_json(const char *json_string);
+            // ZMQ communications
             void send_loop();
             void recv_loop();
+            // Json parsing loop
+            void parse_loop();
             void set_error_msg(const std::string& message = std::string(""));
             void set_msg(const std::string& message = std::string(""));
             // Bssid update
@@ -80,6 +84,10 @@ namespace RelayAgents {
             std::mutex message_lock;
             std::unique_ptr<string> send_message;
             sem_t signal;
+            // Used for command queue
+            std::mutex command_queue_lock;
+            std::queue<std::string> command_queue;
+            sem_t new_command;
     };
     
     // Receives command and initialize different agents

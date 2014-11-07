@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
+        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent.get());
+        comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
     }
@@ -101,6 +103,8 @@ int main(int argc, char *argv[])
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
+        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent.get());
+        comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
     }
