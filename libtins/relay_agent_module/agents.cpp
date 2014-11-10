@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     #else
 
     unique_ptr<CommsAgent> comms_agent;
+    WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
 
     if (argc < 4)
     {
@@ -72,13 +73,12 @@ int main(int argc, char *argv[])
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
 
         // set up warp to wlan & mon to warp
-        WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
-        warp_to_wlan->set_in_interface("eth0");
-	warp_to_wlan->set_out_interface("eth0");
+        warp_to_wlan->set_in_interface("eth1");
+        warp_to_wlan->set_out_interface("eth1");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
         mon_to_warp->set_in_interface("hwsim0");
-        mon_to_warp->set_out_interface("eth0");
+        mon_to_warp->set_out_interface("eth1");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
@@ -94,14 +94,17 @@ int main(int argc, char *argv[])
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
 
         // set up warp to wlan & mon to warp
-        WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
-        warp_to_wlan->set_in_interface("eth0");
-        warp_to_wlan->set_out_interface("eth0");
+        warp_to_wlan->set_in_interface("eth1");
+        warp_to_wlan->set_out_interface("eth1");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
         mon_to_warp->set_in_interface("hwsim0");
-        mon_to_warp->set_out_interface("eth0");
+        mon_to_warp->set_out_interface("eth1");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+
+        vector<string> whatever;
+        thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, whatever);
+        warp_to_wlan_sniff_thread.detach();
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());

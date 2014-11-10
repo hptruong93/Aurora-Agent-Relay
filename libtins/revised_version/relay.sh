@@ -54,10 +54,10 @@ ifconfig ${wlan_iface} up
 ifconfig ${eth_iface} up
 
 echo Relay from hwsim0 to ${eth_iface}
-screen -S frommon${wlan_iface} -d -m ./mon_to_warp.out hwsim0 ${eth_iface} ${bssid}
+screen -S mon${wlan_iface} -d -m ./mon_to_warp.out hwsim0 ${eth_iface} ${bssid}
 
 echo Relay from ${eth_iface} to wlan interface 
-screen -S to${wlan_iface} -d -m ./warp_to_wlan.out ${eth_iface} mon.${wlan_iface} ${wlan_iface} ${bssid}
+screen -S warp${wlan_iface} -d -m ./warp_to_wlan.out ${eth_iface} mon.${wlan_iface} ${wlan_iface} ${bssid}
 
 echo Relay from ${wlan_iface} to ${eth_iface}
-screen -S from${wlan_iface} -d -m ./wlan_to_warp.out ${wlan_iface} ${eth_iface} ${bssid}
+screen -S ${wlan_iface} -d -m ./wlan_to_warp.out ${wlan_iface} ${eth_iface} ${bssid}

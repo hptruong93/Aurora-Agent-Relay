@@ -27,6 +27,10 @@ using namespace std;
 
 using namespace RelayAgents;
 
+
+#define INFO fprintf(stdout, "info: %s:%d: ", __FILE__, __LINE__)
+
+
 WarpToWlanAgent::WarpToWlanAgent() : RelayAgent()
 {
     sem_init(&this->mac_control_sync, 0, 1);
@@ -56,22 +60,28 @@ bool WarpToWlanAgent::process(PDU &pkt)
         WARP_protocol::WARP_mac_control_struct mac_result;
         uint8_t packet_type = WARP_protocol::check_warp_layer_type(warp_layer_buffer);
         uint32_t data_processed_length = 0;
+        
+        printf("Type is %d\n", packet_type);
 
         switch(packet_type)
         {
-            case TYPE_CONTROL:
+            // Need to modify type parsing because subtype and type might share a same ID
+            case TYPE_TRANSMIT:
                 data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmit_result);
                 break;
             case SUBTYPE_TRANSMISSION_CONTROL:
                 data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &transmission_result);
                 break;
             case SUBTYPE_MAC_ADDRESS_CONTROL:
+                cout << "Received Mac Control Packet from WARP" << endl;
                 data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &mac_result);
                 break;
         }
 
+        cout << "Data processed length: " << data_processed_length << endl;
+
         if (data_processed_length != 0) {//Has some data to forward to interface
-            if (packet_type == TYPE_CONTROL) {
+            if (packet_type == TYPE_TRANSMIT) {
                 uint8_t* assembled_data = warp_layer_buffer + data_processed_length;
                 uint32_t data_length = transmit_result.payload_size;
 
@@ -110,10 +120,10 @@ bool WarpToWlanAgent::process(PDU &pkt)
 
     // If agent receives stop signal then this is the last process function called
     this->status_lock.lock();
-    bool reutrn_code = !this->complete;
+    bool return_code = !this->complete;
     this->status_lock.unlock();
 
-    return reutrn_code;
+    return return_code;
 }
 
 void WarpToWlanAgent::run(vector<string> args)
@@ -138,13 +148,13 @@ void WarpToWlanAgent::run(vector<string> args)
         }
     } else {
         this->set_in_interface("eth1");
-        this->set_out_interface("mon.wlan0");
+        this->set_out_interface("eth1");
 
-        string mon_interface = "mon.wlan0";
-        string wlan_interface = "wlan0";
+        // string mon_interface = "mon.wlan0";
+        // string wlan_interface = "wlan0";
 
-        cout << "Init warp to wlan from eth1 to mon.wlan0" << endl;
-        cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
+        // cout << "Init warp to wlan from eth1 to mon.wlan0" << endl;
+        // cout << "Monitor interface is " << mon_interface << " and wlan interface is " << wlan_interface << endl;
     }
 
     initialize_receiver();
@@ -185,9 +195,8 @@ int WarpToWlanAgent::timed_sync(int operation_code, void* response, int timeout)
             *(uint8_t*)response = this->response_packet_type;
             return return_code;
         case BSSID_NODE_OPS::TRANSMISSION_CNTRL:
-            // return_code = sem_timedwait(&this->transmission_sync, &ts);
-            // *(uint8_t*)response = this->response_packet_type;
-            *(uint8_t*)response = TRANSMISSION_CONFIGURE_SUCCESS_CODE;
+            return_code = sem_timedwait(&this->transmission_sync, &ts);
+            *(uint8_t*)response = this->response_packet_type;
             return return_code;
     }
     return return_code;

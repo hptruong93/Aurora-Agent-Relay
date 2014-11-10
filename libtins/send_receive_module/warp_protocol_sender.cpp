@@ -43,6 +43,8 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
     //At this point, assume that transmit_info has been setup correctly
     EthernetII to_send = EthernetII(WARP, PC_ENGINE);
+    cout << "Source is " << PC_ENGINE << endl;
+    cout << "Dest is " << WARP << endl;
     to_send.payload_type(WARP_PROTOCOL_TYPE);
 
     if (type == TYPE_TRANSMIT) {

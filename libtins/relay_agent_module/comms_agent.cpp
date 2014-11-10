@@ -51,8 +51,6 @@ CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port, c
 
 void CommsAgent::send_loop()
 {
-    zmq::message_t send_message(DEFAULT_MSG_SIZE);
-
     zmq::context_t ctx(1);
     zmq::socket_t pub_socket = zmq::socket_t(ctx, ZMQ_PUB);
 
@@ -62,16 +60,19 @@ void CommsAgent::send_loop()
 
     while (true)
     {
-        // cout<<"waiting..."<<endl;
+        zmq::message_t send_message(DEFAULT_MSG_SIZE);
+
         sem_wait(&this->signal);
+        cout << "Trying to send something\n" << endl;
         this->message_lock.lock();
 
         snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, this->send_message.get()->c_str());
-        send_message.rebuild();
         pub_socket.send(send_message);
 
         this->message_lock.unlock();
     }
+
+    cout << "Exiting send loop ?" << endl;
 }
 
 void CommsAgent::recv_loop()
@@ -94,6 +95,8 @@ void CommsAgent::recv_loop()
         // Add to command queue
         this->command_queue_lock.lock();
         this->command_queue.push(string((char*)(received_msg.data() + 4)));
+        cout<<"PUSHED!!: "<<string((char*)(received_msg.data() + 4))<<endl;
+        cout<<"SIZE AFTER PUSH: "<<this->command_queue.size()<<endl;
         this->command_queue_lock.unlock();
 
         sem_post(&this->new_command);
@@ -110,12 +113,16 @@ void CommsAgent::parse_loop()
         {
             this->command_queue_lock.lock();
             string next_command = this->command_queue.front();
+            cout<<"PEEK: "<<this->command_queue.front()<<endl;
+            cout<<"SIZE WHEN PEEK: "<<this->command_queue.size()<<endl;
             this->command_queue_lock.unlock();
 
             this->parse_json(next_command.c_str());
 
             this->command_queue_lock.lock();
             this->command_queue.pop();
+            cout<<"POPPED SOMETHING!"<<endl;
+            cout<<"SIZE AFTER POP: "<<this->command_queue.size()<<endl;
             this->command_queue_lock.unlock();
         }
     }
@@ -123,7 +130,6 @@ void CommsAgent::parse_loop()
 
 ErrorCode CommsAgent::parse_json(const char *json_string)
 {
-    cout<<json_string<<endl;
     json_t *root;
     json_error_t error;
 
@@ -163,10 +169,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     {
         cout << "ERROR: command is not a string." <<endl;
         this->set_error_msg("Error parsing the json object.");
-        if (command != NULL)
-        {
-            json_decref(command);
-        }
+        // if (command != NULL)
+        // {
+        //     json_decref(command);
+        // }
         json_decref(root);
 
         return ErrorCode::ERROR;
@@ -181,17 +187,17 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
     {
-        json_decref(command);
+        // json_decref(command);
         // Get changes object
         json_t *changes = json_object_get(root, JSON_CHANGES);
         if (!json_is_object(changes))
         {
             cout << "ERROR: no valid changes object found." <<endl;
             this->set_error_msg("Error parsing the json object.");
-            if (changes != NULL)
-            {
-                json_decref(changes);
-            }
+            // if (changes != NULL)
+            // {
+            //     json_decref(changes);
+            // }
             json_decref(root);
 
             return ErrorCode::ERROR;
@@ -204,10 +210,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         {
             cout << "ERROR: bssid is not a valid string." <<endl;
             this->set_error_msg("Error parsing the json object.");
-            if (bssid != NULL)
-            {
-                json_decref(changes);
-            }
+            // if (bssid != NULL)
+            // {
+            //     json_decref(changes);
+            // }
             json_decref(root);
 
             return ErrorCode::ERROR;
@@ -218,7 +224,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
         if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
         {
-            json_decref(bssid);
+            // json_decref(bssid);
             json_decref(root);
 
             cout << "ERROR: invalid bssid format." << endl;
@@ -233,10 +239,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         // Wait until WARP talks back
         int error;
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
-            || response == MAC_ADD_CODE)
+            || response != MAC_ADD_CODE)
         {
             delete mac_add_packet;
-            json_decref(bssid);
+            // json_decref(bssid);
             json_decref(root);
 
             cout << "ERROR: WARP failed to add mac address, or the request timed out." << endl;
@@ -257,26 +263,26 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid channel format." << endl;
-            if (parameters != NULL)
-            {
-                json_decref(parameters);
-            }
+            // if (parameters != NULL)
+            // {
+            //     json_decref(parameters);
+            // }
             free(transmission_control);
             json_decref(root);
 
             return ErrorCode::ERROR;
         }
         transmission_control->channel = (uint8_t)json_integer_value(parameters);
-        json_decref(parameters);
+        // json_decref(parameters);
 
         parameters = json_object_get(changes, JSON_HW_MODE);
         if (!json_is_string(parameters))
         {
             cout << "ERROR: invalid hw_mode format." << endl;
-            if (parameters != NULL)
-            {
-                json_decref(parameters);
-            }
+            // if (parameters != NULL)
+            // {
+            //     json_decref(parameters);
+            // }
             free(transmission_control);
             json_decref(root);
 
@@ -284,46 +290,46 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         }
         string hwmode_str(json_string_value(parameters));
         transmission_control->hw_mode = parse_hwmode(hwmode_str);
-        json_decref(parameters);
+        // json_decref(parameters);
 
         parameters = json_object_get(changes, JSON_TX_POWER);
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid tx_power format." << endl;
-            if (parameters != NULL)
-            {
-                json_decref(parameters);
-            }
+            // if (parameters != NULL)
+            // {
+            //     json_decref(parameters);
+            // }
             free(transmission_control);
             json_decref(root);
 
             return ErrorCode::ERROR;
         }
         transmission_control->tx_power = (uint8_t)json_integer_value(parameters);
-        json_decref(parameters);
+        // json_decref(parameters);
 
         parameters = json_object_get(changes, JSON_DISABLED);
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid disabled format." << endl;
-            if (parameters != NULL)
-            {
-                json_decref(parameters);
-            }
+            // if (parameters != NULL)
+            // {
+            //     json_decref(parameters);
+            // }
             free(transmission_control);
             json_decref(root);
 
             return ErrorCode::ERROR;
         }
         transmission_control->disabled = (uint8_t)json_integer_value(parameters);
-        json_decref(parameters);
+        // json_decref(parameters);
 
         // Done! Time to send the cyka
         WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(transmission_control);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
 
         if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500)) == -1
-            || response == TRANSMISSION_CONFIGURE_FAIL_CODE)
+            || response != TRANSMISSION_CONFIGURE_SUCCESS_CODE)
         {
             delete transmission_packet;
             free(transmission_control);
@@ -337,10 +343,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         // Configuration successful!!
         delete transmission_packet;
         free(transmission_control);
-
-        // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::BSSID_ADD, (void*)json_string_value(bssid));
-        json_decref(bssid);
+        cout << "Parsing: Freed transmission thingy" << endl;
     }
     else if (strcmp(command_str, UCI_DELETE_SECTION) == 0 ||
                 strcmp(command_str, UCI_DELETE_BSS) == 0)
@@ -398,7 +401,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         delete mac_remove_packet;
 
         // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
+        // this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
         json_decref(bssid);
     }
     else 
@@ -411,6 +414,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     sem_post(&this->signal);
 
     json_decref(root);
+
+    cout << "Parsing: Everything ok." << endl;
 
     return ErrorCode::OK;
 }
