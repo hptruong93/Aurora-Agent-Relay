@@ -8,6 +8,7 @@
 #include "wlan_to_warp_agent.h"
 #include "warp_to_wlan_agent.h"
 #include "comms_agent.h"
+#include "../temp_test/dpm_agent.h"
 #include "agents.h"
 // Testing
 #include "test.h"
@@ -66,6 +67,8 @@ int main(int argc, char *argv[])
 
     unique_ptr<CommsAgent> comms_agent;
     WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
+    DPMAgent *dpm = new DPMAgent();
+    dpm->init();
 
     if (argc < 4)
     {
@@ -80,6 +83,8 @@ int main(int argc, char *argv[])
         mon_to_warp->set_in_interface("hwsim0");
         mon_to_warp->set_out_interface("eth1");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+
+        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
@@ -105,6 +110,8 @@ int main(int argc, char *argv[])
         vector<string> whatever;
         thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, whatever);
         warp_to_wlan_sniff_thread.detach();
+
+        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
         thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
         thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
