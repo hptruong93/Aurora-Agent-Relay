@@ -13,7 +13,7 @@ INC_SEND_MODULE = -I$(SEND_RECEIVE_MODULE_DIR)
 UTILITY_DIR = ../revised_version/
 INC_UTILITY = -I$(UTILITY_DIR)
 
-DPM_DIR = ../temp_test/
+DPM_DIR = ../datapath_manager/
 INC_DPM = -I$(DPM_DIR)
 
 RELAY_AGENT_MODULE_DIR = ../relay_agent_module/
@@ -26,7 +26,7 @@ all: agents
 ########################################  Linking  ########################################################
 
 agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o
-	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o $(LFLAGS) $(INC_DPM) -o agents.out
+	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o $(LFLAGS) -o agents.out
 
 ###################################Compiling main files####################################################
 dpm_agent.o: $(DPM_DIR)dpm_agent.cpp

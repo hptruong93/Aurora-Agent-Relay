@@ -320,7 +320,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         free(transmission_control);
         
         // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
+        this->update_bssids(BSSID_NODE_OPS::BSSID_ADD, (void*)json_string_value(bssid));
     }
     else if (strcmp(command_str, UCI_DELETE_SECTION) == 0 ||
                 strcmp(command_str, UCI_DELETE_BSS) == 0)
