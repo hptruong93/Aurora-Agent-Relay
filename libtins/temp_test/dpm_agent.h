@@ -1,7 +1,7 @@
 #ifndef DPM_AGENT_H_
 #define DPM_AGENT_H_
 
-#include "../relay_agent_module/bssid_node.h"
+#include "bssid_node.h"
 
 #include <string>
 #include <stdlib.h>

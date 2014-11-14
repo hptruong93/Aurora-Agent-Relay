@@ -1,27 +1,5 @@
 #include "dpm_agent.h"
-
-char* get_interface_name(const std::string& addr)
-{
-    FILE *fp;
-    char *interface_name = (char*)malloc(64);
-    size_t interface_name_len = 0;
-    int c;
-    std::string command = std::string("ifconfig | grep -E ") + std::string("'") +  std::string("HWaddr ") + addr + std::string("'");
-    fp = popen(command.c_str(), "r");
-
-    while ((c = fgetc(fp)) != EOF)
-    {
-        if ((char) c == ' ')
-        {
-            break;
-        }
-        interface_name[interface_name_len++] = (char)c;
-    }
-
-    interface_name[interface_name_len] = '\0';
-
-    return interface_name;
-}
+#include "util.h"
 
 DPMAgent::DPMAgent()
 {
@@ -60,7 +38,7 @@ void DPMAgent::initialize(std::string ovs_name)
 
 int DPMAgent::add(const std::string& bssid, const std::string& ethernet_interface)
 {
-    char* interface_name = get_interface_name(bssid);
+    char* interface_name = getInterfaceName(bssid);
     std::string virtual_interface = std::string(interface_name);
     free(interface_name);
 
@@ -69,7 +47,7 @@ int DPMAgent::add(const std::string& bssid, const std::string& ethernet_interfac
 
 int DPMAgent::remove(const std::string& bssid, const std::string& ethernet_interface)
 {
-    char* interface_name = get_interface_name(bssid);
+    char* interface_name = getInterfaceName(bssid);
     std::string virtual_interface = std::string(interface_name);
     free(interface_name);
 

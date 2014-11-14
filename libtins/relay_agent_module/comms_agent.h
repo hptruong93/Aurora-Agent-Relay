@@ -1,10 +1,10 @@
 #ifndef COMMSAGENT_H_
 #define COMMSAGENT_H_
 
-#include "../revised_version/config.h"
-#include "../send_receive_module/warp_protocol_sender.h"
-#include "../send_receive_module/fragment_receiver.h"
-#include "../warp_protocol/warp_protocol.h"
+#include "config.h"
+#include "warp_protocol_sender.h"
+#include "fragment_receiver.h"
+#include "warp_protocol.h"
 
 #include <string>
 #include <vector>

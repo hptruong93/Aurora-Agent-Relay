@@ -7,13 +7,6 @@
 #include <functional>
 #include <iostream>
 
-#include "../revised_version/config.h"
-#include "../revised_version/util.h"
-#include <tins/tins.h>
-#include "../send_receive_module/warp_protocol_sender.h"
-#include "../send_receive_module/fragment_receiver.h"
-#include "../warp_protocol/warp_protocol.h"
-
 using namespace Tins;
 using namespace Config;
 using namespace std;

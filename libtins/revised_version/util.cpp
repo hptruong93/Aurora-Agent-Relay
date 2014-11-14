@@ -43,11 +43,16 @@ char* getInterface(Tins::Dot11::address_type addr) {
     string address = addr.to_string();
     cout << "Address is " << address << endl;
 
+    return getInterfaceName(address);
+}
+
+char* getInterfaceName(const std::string& addr)
+{
     FILE *fp;
     char *interface_name = (char*)malloc(64);
     size_t interface_name_len = 0;
     int c;
-    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
+    std::string command = std::string(GREP_FROM_IFCONFIG) + std::string("'") +  std::string(HW_ADDR_KEYWORD) + addr + std::string("'");
     fp = popen(command.c_str(), "r");
 
     while ((c = fgetc(fp)) != EOF)
