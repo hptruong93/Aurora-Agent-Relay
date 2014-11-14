@@ -29,9 +29,6 @@
 #define SUBTYPE_MANGEMENT_TRANSMIT                    0
 #define SUBTYPE_DATA_TRANSMIT                         1
 
-#define BSSID_INDEX                                   2 //6 bytes following will be bssid
-#define FLAG_INDEX                                    8
-#define RETRY_INDEX                                   9
 #define DATA_LENGTH_MSB_INDEX                         2
 #define DATA_LENGTH_LSB_INDEX                         3
 
@@ -48,7 +45,7 @@
 #define SUBTYPE_MAC_ADDRESS_CONTROL                   4
 #define SUBTYPE_TRANSMISSION_CONTROL                  8
 
-// For type = transmission control
+// For subtype = transmission control
 #define TRANSMISSION_CONFIGURE_CODE                   1
 #define TRANSMISSION_VERIFY_CODE                      4
 #define TRANSMISSION_VERIFIED_CODE                    5
@@ -64,7 +61,7 @@
 #define RATE_INDEX                                    13
 #define HW_MODE_INDEX                                 14
 
-// For type = mac adress control
+// For subtype = mac adress control
 #define NOTHING_CODE                                  0
 #define MAC_ADD_CODE                                  1
 #define MAC_REMOVE_CODE                               32
@@ -81,6 +78,7 @@
 #define DEFAULT_TRANSMIT_FLAG                         0
 #define DEFAULT_TRANSMIT_RETRY                        0
 #define MAX_RETRY                                     7
+
 #define DEFAULT_MAC_CONTROL_OPERATION_CODE            0
 #define DEFAULT_TRANSMISSION_CONTROL_DISABLED         0
 #define DEFAULT_TRANSMISSION_CONTROL_TX_POWER         0
@@ -143,7 +141,7 @@ namespace Tins {
 
         static WARP_fragment_struct* generate_fragment_struct();
 
-        static WARP_protocol* create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype);
+        static WARP_protocol* create_transmit(WARP_transmit_struct* info, uint8_t subtype);
 
         static WARP_protocol* create_mac_control(WARP_mac_control_struct* info);
 

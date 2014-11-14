@@ -55,65 +55,14 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
         }
 
         //Some data packets need to be checked if length exceed ethernet protocol
-        WARP_protocol::WARP_fragment_struct* fragment_info = WARP_protocol::generate_fragment_struct();
-        WARP_protocol* init_warp_layer = WARP_protocol::create_transmit(transmit_info, fragment_info, subtype);
+        //For now assume all packets are within ethernet length
+        WARP_protocol* init_warp_layer = WARP_protocol::create_transmit(transmit_info, subtype);
 
-        if (pkt.size() + init_warp_layer->header_size() > Config::MAX_ETHERNET_LENGTH) {//Split into several fragment
-            uint16_t fragment_max_length = Config::MAX_ETHERNET_LENGTH - init_warp_layer->header_size();
-            // cout << "Too long, need to be fragmented. Available space is " << fragment_max_length << endl;
-
-            uint8_t total_number_fragment = (pkt.size() % fragment_max_length == 0) ? (pkt.size() / fragment_max_length) : (pkt.size() / fragment_max_length + 1);
-            fragment_info->total_number_fragment = total_number_fragment;
-
-            uint8_t i = 0;
-            // printf("Total split %d\n", total_number_fragment);
-            // printf("Header size is %d\n", warp_layer->header_size());
-            std::vector<uint8_t> packet_data = pkt.serialize();
-
-            //For some reason can't use the packet_data as the buffer....????!!!!
-            static uint8_t temp_buffer[2048];
-            memcpy(temp_buffer, &(packet_data[0]), packet_data.size());
-
-            for (; i < total_number_fragment; i++) {
-                // printf("Looping with index = %d\n", i);
-                fragment_info->fragment_number = i;
-
-                
-                EthernetII sending = EthernetII(WARP, PC_ENGINE);
-                sending.payload_type(WARP_PROTOCOL_TYPE);
-
-                //Prepare the packet
-                uint16_t byte_offset = i * (fragment_max_length);
-                fragment_info->byte_offset = byte_offset;
-                //cout << "Offset is " << byte_offset << endl;
-                uint32_t fragment_length = 1;
-                if (byte_offset + fragment_max_length <= pkt.size()) {
-                    fragment_length = fragment_max_length;
-                } else {
-                    fragment_length = pkt.size() - byte_offset;
-                }
-                transmit_info->payload_size = fragment_length;
-
-                WARP_protocol* warp_layer = WARP_protocol::create_transmit(transmit_info, fragment_info, subtype);
-                // cout << "Fragment length is " << fragment_length << endl;
-
-                RawPDU current_fragment(temp_buffer + byte_offset, fragment_length);                
-                //Prepared
-
-                //Assemble and send
-                sending = sending / (*warp_layer) / current_fragment;
-
-                sender->send(sending);
-                delete warp_layer;
-            }
-        } else {//Send in one fragment
-            to_send = to_send / (*init_warp_layer) / (pkt);
-            //cout << "Can send in one shot" << endl;
-            sender->send(to_send);
-        }
+        to_send = to_send / (*init_warp_layer) / (pkt);
+        sender->send(to_send);
 
         delete init_warp_layer;
-        free(fragment_info);
+        cout << "Sent 1 transmit packet" << endl;
     } else if (type == TYPE_CONTROL) {
         //The packet passed in with the input is the control packet. Append this to the ethernet header and send
         //It is safe to assume that the WARP protocol length will never exceed ethernet payload length

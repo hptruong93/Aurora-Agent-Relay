@@ -23,6 +23,8 @@ bool MonToWarpAgent::process(PDU &pkt)
 {
     WARP_ProtocolSender* protocol_sender = this->protocol_sender.get();
 
+    cout << "Running ...\n";
+
     if (pkt.pdu_type() == pkt.RADIOTAP) {
     
         //Start processing of RadioTap Packets
@@ -32,7 +34,9 @@ bool MonToWarpAgent::process(PDU &pkt)
             Dot11::address_type source = management_frame.addr2();
             Dot11::address_type dest = management_frame.addr1();
 
-            if (source == HOSTAPD || source == BROADCAST || std::find(this->bssid_list.begin(), this->bssid_list.end(), source) != this->bssid_list.end()) {
+            cout << "Source is " << source << endl;
+
+            if (std::find(this->bssid_list.begin(), this->bssid_list.end(), source) != this->bssid_list.end()) {
                 //Add an ethernet frame and send over iface
                 //-----------------> Create WARP transmit info
                 WARP_protocol::WARP_transmit_struct* transmit_info = WARP_protocol::get_default_transmit_struct();

@@ -19,13 +19,16 @@ INC_DPM = -I$(DPM_DIR)
 RELAY_AGENT_MODULE_DIR = ../relay_agent_module/
 INC_RELAY_AGENT = -I$(RELAY_AGENT_MODULE_DIR)
 
+FILTER_DIR = ../filters/
+INC_FILTER = -I$(FILTER_DIR)
+
 ###########################################################################################################
 
 all: agents
 
 ########################################  Linking  ########################################################
 
-agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o
+agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o packet_filter.o management_filter.o dot11_filter.o
 	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o $(LFLAGS) -o agents.out
 
 ###################################Compiling main files####################################################
@@ -51,6 +54,16 @@ agents.o : agents.cpp
 	$(CC) agents.cpp $(CFLAGS) -o agents.o
 
 ##################################Files to link later######################################################
+
+packet_filter.o : $(FILTER_DIR)packet_filter.cpp
+	$(CC) $(FILTER_DIR)packet_filter.cpp $(CFLAGS) $(INC_FILTER) -o packet_filter.o
+
+management_filter.o : $(FILTER_DIR)management_filter.cpp
+	$(CC) $(FILTER_DIR)management_filter.cpp $(CFLAGS) $(INC_FILTER) -o management_filter.o
+
+dot11_filter.o : $(FILTER_DIR)dot11_filter.cpp
+	$(CC) $(FILTER_DIR)dot11_filter.cpp $(CFLAGS) $(INC_FILTER) -o dot11_filter.o
+
 
 fragment_receiver.o : $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp
 	$(CC) $(SEND_RECEIVE_MODULE_DIR)fragment_receiver.cpp $(CFLAGS) $(INC_SEND_MODULE) -o fragment_receiver.o

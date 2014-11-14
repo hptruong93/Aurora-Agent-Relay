@@ -92,35 +92,19 @@ namespace Tins {
         return output;
     }
 
-    WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info, WARP_fragment_struct* fragment_info, uint8_t subtype) {
+    WARP_protocol* WARP_protocol::create_transmit(WARP_transmit_struct* info, uint8_t subtype) {
         uint8_t* buffer;
         uint8_t buffer_length;
 
-        buffer_length = 2 + 10 + 5;
+        buffer_length = 2 + 2;
         buffer = (uint8_t*) std::malloc(buffer_length * sizeof(uint8_t));
 
         //Header
-        buffer[TYPE_INDEX] = 0x01;
+        buffer[TYPE_INDEX] = TYPE_TRANSMIT;
         buffer[SUBTYPE_INDEX] = subtype;
 
         //Transmit
-        memcpy(&(buffer[2]), &(info->bssid[0]), 6);
-        buffer[FLAG_INDEX] = info->flag;
-        buffer[RETRY_INDEX] = info->retry;
-        
-
-        info->payload_size += FRAGMENT_INFO_LENGTH;
-        if (fragment_info == NULL) {
-            cout << "NULL fragment info detected..." << endl;
-        }
-
-        buffer[12] = fragment_info->id;
-        buffer[13] = fragment_info->fragment_number;
-        buffer[14] = fragment_info->total_number_fragment;
-        buffer[15] = ((fragment_info->byte_offset) >> 8) & 0xff;
-        buffer[16] = (fragment_info->byte_offset) & 0xff;
-
-        buffer[DATA_LENGTH_MSB_INDEX] = (info->payload_size >> 8) & 0xff;
+        buffer[DATA_LENGTH_MSB_INDEX] = ((info->payload_size) >> 8) & 0xff;
         buffer[DATA_LENGTH_LSB_INDEX] = info->payload_size & 0xff;
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
