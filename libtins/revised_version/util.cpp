@@ -41,6 +41,43 @@ void print_packet(uint8_t* packet, uint32_t length) {
 
 char* getInterface(Tins::Dot11::address_type addr) {
     string address = addr.to_string();
+
+    if (address == "ff:ff:ff:ff:ff:ff")
+    {
+    	FILE *fp;
+    	char *interfaces = (char*)malloc(1024);
+    	bool should_take = true;
+    	size_t interfaces_index = 0;
+    	char c;
+
+    	std::string command = std::string(GREP_FROM_IFCONFIG) + std::string(MON_INTERFACE_KEYWORD);
+    	fp = popen(command.c_str(), "r");
+
+    	while ((c = fgetc(fp)) != EOF)
+    	{
+    		if (c == '\n')
+    		{
+    			should_take = true;
+    		}
+    		else if (c == ' ')
+    		{
+    			should_take = false;
+    			interfaces[interfaces_index++] = '|';
+    		}
+
+    		if (should_take)
+    		{
+    			interfaces[interfaces_index++] = c;
+    		}
+    	}
+
+    	interfaces[interfaces_index] = '\0';
+
+    	cout << "Interfaces are: " << interfaces << endl;
+
+    	return interfaces;
+    }
+
     cout << "Address is " << address << endl;
 
     return getInterfaceName(address);
@@ -67,4 +104,16 @@ char* getInterfaceName(const std::string& addr)
     interface_name[interface_name_len] = '\0';
 
     return interface_name;
+}
+
+void split_string(std::string& original, const std::string& delimiter, std::vector<std::string> splits)
+{
+	int pos;
+	while ((pos = original.find(delimiter)) != std::string::npos)
+	{
+		splits.push_back(original.substr(0, pos));
+		original.erase(0, pos + delimiter.length());
+	}
+
+	splits.push_back(original);
 }
