@@ -51,7 +51,7 @@ relay_agent.o : relay_agent.cpp
 	$(CC) relay_agent.cpp $(CFLAGS) -o relay_agent.o
 
 agents.o : agents.cpp
-	$(CC) agents.cpp $(CFLAGS) -o agents.o
+	$(CC) agents.cpp $(CFLAGS) $(INC_DPM) -o agents.o
 
 ##################################Files to link later######################################################
 

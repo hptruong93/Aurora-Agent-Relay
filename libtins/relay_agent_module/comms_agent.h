@@ -61,7 +61,7 @@ namespace RelayAgents {
         std::mutex mac_add_success_lock;
         bool mac_add_success;
         public:
-            CommsAgent(const char *init_send_port = "5555", const char *init_recv_port = "5556", const char *init_peer_ip_addr = "localhost");
+            CommsAgent(const char *init_send_port = "6001", const char *init_recv_port = "6000", const char *init_peer_ip_addr = "localhost");
             ErrorCode parse_json(const char *json_string);
             // ZMQ communications
             void send_loop();

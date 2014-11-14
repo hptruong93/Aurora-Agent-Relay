@@ -8,7 +8,7 @@
 #include "wlan_to_warp_agent.h"
 #include "warp_to_wlan_agent.h"
 #include "comms_agent.h"
-#include "../datapath_manager/dpm_agent.h"
+#include "dpm_agent.h"
 #include "agents.h"
 // Testing
 #include "test.h"
@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
 
     unique_ptr<CommsAgent> comms_agent;
     WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
+    MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
     DPMAgent *dpm = new DPMAgent();
     dpm->init();
 
@@ -75,14 +76,20 @@ int main(int argc, char *argv[])
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
 
-        // set up warp to wlan & mon to warp
-        warp_to_wlan->set_in_interface("eth1");
-        warp_to_wlan->set_out_interface("eth1");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
-        MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
-        mon_to_warp->set_in_interface("hwsim0");
-        mon_to_warp->set_out_interface("eth1");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+
+        vector<string> interfaces;
+        interfaces.push_back("eth1");
+        interfaces.push_back("eth1");
+        thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, interfaces);
+        warp_to_wlan_sniff_thread.detach();
+
+        interfaces.clear();
+        interfaces.push_back("hwsim0");
+        interfaces.push_back("eth1");
+        thread mon_to_warp_sniff_thread(&MonToWarpAgent::run, mon_to_warp, interfaces);
+        mon_to_warp_sniff_thread.detach();
 
         comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
@@ -98,18 +105,20 @@ int main(int argc, char *argv[])
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
 
-        // set up warp to wlan & mon to warp
-        warp_to_wlan->set_in_interface("eth1");
-        warp_to_wlan->set_out_interface("eth1");
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
-        MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
-        mon_to_warp->set_in_interface("hwsim0");
-        mon_to_warp->set_out_interface("eth1");
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
 
-        vector<string> whatever;
-        thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, whatever);
+        vector<string> interfaces;
+        interfaces.push_back("eth1");
+        interfaces.push_back("eth1");
+        thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, interfaces);
         warp_to_wlan_sniff_thread.detach();
+
+        interfaces.clear();
+        interfaces.push_back("hwsim0");
+        interfaces.push_back("eth1");
+        thread mon_to_warp_sniff_thread(&MonToWarpAgent::run, mon_to_warp, interfaces);
+        mon_to_warp_sniff_thread.detach();
 
         comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
