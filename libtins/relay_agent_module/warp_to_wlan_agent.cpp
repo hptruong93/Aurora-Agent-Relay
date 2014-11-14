@@ -148,7 +148,7 @@ void WarpToWlanAgent::run(vector<string> args)
         }
     } else {
         this->set_in_interface("eth1");
-        this->set_out_interface("wlan0");
+        this->set_out_interface("eth1");
 
         // string mon_interface = "mon.wlan0";
         // string wlan_interface = "wlan0";

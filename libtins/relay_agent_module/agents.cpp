@@ -8,7 +8,7 @@
 #include "wlan_to_warp_agent.h"
 #include "warp_to_wlan_agent.h"
 #include "comms_agent.h"
-#include "../temp_test/dpm_agent.h"
+#include "../datapath_manager/dpm_agent.h"
 #include "agents.h"
 // Testing
 #include "test.h"
