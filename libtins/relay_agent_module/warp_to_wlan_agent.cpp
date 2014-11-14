@@ -92,18 +92,18 @@ bool WarpToWlanAgent::process(PDU &pkt)
                     //Put in radio tap and send to output
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(assembled_data, data_length);
-                    // char* interface_name = getInterface(management_frame.addr1());
+                    char* interface_name = getInterface(dot11.addr1());
 
-                    // if (strlen(interface_name) > 0) {
-                        this->packet_sender.get()->default_interface("hwsim0");
+                    if (strlen(interface_name) > 0) {
+                        this->packet_sender.get()->default_interface(interface_name);
                         this->packet_sender.get()->send(to_send);
-                        cout << "Sent 1 packet to " << "hwsim0" << endl;
-                    // } else {
-                    //     cout << "ERROR: no interface found for the destination hardware address: " 
-                    //             << dot11.addr1().to_string() << endl;
-                    // }
+                        cout << "Sent 1 packet to " << interface_name << endl;
+                    } else {
+                        cout << "ERROR: no interface found for the destination hardware address: " 
+                                << dot11.addr1().to_string() << endl;
+                    }
 
-                    // free(interface_name);
+                    free(interface_name);
                 }
             } else if (packet_type == SUBTYPE_TRANSMISSION_CONTROL) {
                 this->response_packet_type = transmission_result.operation_code;
@@ -244,32 +244,4 @@ int WarpToWlanAgent::sync(int operation_code, void* data)
     }
     return 0;
     #endif
-}
-
-// Static
-
-char* WarpToWlanAgent::get_interface_name(Dot11::address_type addr)
-{
-    string address = addr.to_string();
-    cout << "Address is " << address << endl;
-
-    FILE *fp;
-    char *interface_name = (char*)malloc(64);
-    size_t interface_name_len = 0;
-    int c;
-    string command = string(GREP_FROM_IFCONFIG , strlen(GREP_FROM_IFCONFIG)) + "'" + string(HW_ADDR_KEYWORD, strlen(HW_ADDR_KEYWORD)) + address + "'";
-    fp = popen(command.c_str(), "r");
-
-    while ((c = fgetc(fp)) != EOF)
-    {
-        if ((char) c == ' ')
-        {
-            break;
-        }
-        interface_name[interface_name_len++] = (char)c;
-    }
-
-    interface_name[interface_name_len] = '\0';
-
-    return interface_name;
 }
