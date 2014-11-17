@@ -1,7 +1,9 @@
 #include "dpm_agent.h"
+#include "util.h"
 
 #include <iostream>
 #include <unistd.h>
+#include <algorithm>
 
 char* get_interface_name(const std::string& addr)
 {
@@ -95,11 +97,61 @@ int DPMAgent::disassociate(const std::string& bssid, const std::string& virtual_
     return execute_command("disassociate" + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface + " " + bssid);
 }
 
-void timed_check(int period)
+void DPMAgent::timed_check(int period)
 {
     while (true)
     {
-        // do something
+        // Call hostapd
+        FILE *fp;
+        char *output_str = (char*)malloc(1024 * sizeof(char));
+        int index = 0;
+        char c = 's';
+
+        fp = popen((std::string(BASE_COMMAND_STR) + " " + "init" + " " + ovs_name).c_str(), "r");
+        while ((c = fgetc(fp)) != EOF)
+        {
+
+            output_str[index++] = c;
+        }
+        output_str[index] = '\0';
+
+        std::string output(output_str);
+        free(output_str);
+
+        std::vector<std::string> output_mac_addr;
+        split_string(output, "\n", &output_mac_addr);
+
+        std::vector<std::string> new_associated;
+
+        // Associate new mac addresses
+        for (int i = 0; i < output_mac_addr.size(); i++)
+        {
+            // Hacky way of detecting a mac address
+            if (output_mac_addr[i].length() == 17)
+            {
+                if (std::find(associated_mac_addr.begin(), associated_mac_addr.end(), output_mac_addr[i]) == associated_mac_addr.end())
+                {
+                    // Temporary
+                    associate(output_mac_addr[i], "wlan0", "eth1");
+                }
+
+                new_associated.push_back(associated_mac_addr[i]);
+            }
+        }
+
+        // Disassociate old mac addresses
+        for (int i = 0; i < associated_mac_addr.size(); i++)
+        {
+            if (std::find(new_associated.begin(), new_associated.end(), associated_mac_addr[i]) == new_associated.end())
+            {
+                // Temporary
+                disassociate(output_mac_addr[i], "wlan0", "eth1");
+            }
+        }
+
+        // Update associated mac addr
+        associated_mac_addr = new_associated;
+
         sleep(period);
     }
 }

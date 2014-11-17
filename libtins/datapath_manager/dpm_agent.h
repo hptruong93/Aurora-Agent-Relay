@@ -6,9 +6,11 @@
 #include <string>
 #include <stdlib.h>
 #include <thread>
+#include <vector>
 
 #define BASE_COMMAND_STR            "python -u ../temp_test/datapath_manager.py"
 #define DEFAULT_OVS_NAME			"tb"
+#define HOSTAPD_COMMNAD             "hostapd_cli all_sta"
 
 class DPMAgent : public BssidNode
 {
@@ -27,6 +29,7 @@ class DPMAgent : public BssidNode
     	std::string ovs_name;
     	std::string socket_path;
     	std::unique_ptr<std::thread> ovs_thread;
+        std::vector<std::string> associated_mac_addr;
     	void initialize(std::string ovs);
         int execute_command(std::string command);
 };
