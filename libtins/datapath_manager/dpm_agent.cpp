@@ -1,6 +1,7 @@
 #include "dpm_agent.h"
 
 #include <iostream>
+#include <unistd.h>
 
 char* get_interface_name(const std::string& addr)
 {
@@ -82,6 +83,25 @@ int DPMAgent::remove(const std::string& bssid, const std::string& ethernet_inter
     free(interface_name);
 
     return execute_command("remove " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);   
+}
+
+int DPMAgent::associate(const std::string& bssid, const std::string& virtual_interface, const std::string& ethernet_interface)
+{
+    return execute_command("associate" + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface + " " + bssid);
+}
+
+int DPMAgent::disassociate(const std::string& bssid, const std::string& virtual_interface, const std::string& ethernet_interface)
+{
+    return execute_command("disassociate" + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface + " " + bssid);
+}
+
+void timed_check(int period)
+{
+    while (true)
+    {
+        // do something
+        sleep(period);
+    }
 }
 
 int DPMAgent::sync(int operation_code, void* bssid)
