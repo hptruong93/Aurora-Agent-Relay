@@ -43,8 +43,8 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
 
     //At this point, assume that transmit_info has been setup correctly
     EthernetII to_send = EthernetII(WARP, PC_ENGINE);
-    cout << "Source is " << PC_ENGINE << endl;
-    cout << "Dest is " << WARP << endl;
+    // cout << "Source is " << PC_ENGINE << endl;
+    // cout << "Dest is " << WARP << endl;
     to_send.payload_type(WARP_PROTOCOL_TYPE);
 
     if (type == TYPE_TRANSMIT) {
@@ -62,7 +62,7 @@ void WARP_ProtocolSender::send(PDU& pkt, uint8_t type, uint8_t subtype, WARP_pro
         sender->send(to_send);
 
         delete init_warp_layer;
-        cout << "Sent 1 transmit packet" << endl;
+        // cout << "Sent 1 transmit packet" << endl;
     } else if (type == TYPE_CONTROL) {
         //The packet passed in with the input is the control packet. Append this to the ethernet header and send
         //It is safe to assume that the WARP protocol length will never exceed ethernet payload length

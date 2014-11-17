@@ -1,5 +1,6 @@
 #include "tins/tins.h"
 #include <cstdlib>
+#include <cstring>
 
 #include "util.h"
 
@@ -62,7 +63,6 @@ char* getInterface(Tins::Dot11::address_type addr) {
     		else if (c == ' ')
     		{
     			should_take = false;
-    			interfaces[interfaces_index++] = '|';
     		}
 
     		if (should_take)
@@ -80,7 +80,28 @@ char* getInterface(Tins::Dot11::address_type addr) {
 
     cout << "Address is " << address << endl;
 
-    return getInterfaceName(address);
+    FILE *fp;
+    char *interface_name = (char*)malloc(64);
+    size_t interface_name_len = 0;
+    int c;
+    std::string command = std::string(GREP_FROM_IFCONFIG) + std::string("'") +  std::string(HW_ADDR_KEYWORD) + address + std::string("'");
+    fp = popen(command.c_str(), "r");
+
+    strcpy(interface_name, "mon.");
+    interface_name_len += strlen("mon.");
+
+    while ((c = fgetc(fp)) != EOF)
+    {
+        if ((char) c == ' ')
+        {
+            break;
+        }
+        interface_name[interface_name_len++] = (char)c;
+    }
+
+    interface_name[interface_name_len] = '\0';
+
+    return interface_name;
 }
 
 char* getInterfaceName(const std::string& addr)
@@ -106,14 +127,17 @@ char* getInterfaceName(const std::string& addr)
     return interface_name;
 }
 
-void split_string(std::string& original, const std::string& delimiter, std::vector<std::string> splits)
+void split_string(std::string& original, const std::string& delimiter, std::vector<std::string> *splits)
 {
 	int pos;
 	while ((pos = original.find(delimiter)) != std::string::npos)
 	{
-		splits.push_back(original.substr(0, pos));
+		splits->push_back(original.substr(0, pos));
 		original.erase(0, pos + delimiter.length());
 	}
 
-	splits.push_back(original);
+	if (original.length() > 0 && original != " ")
+	{
+		splits->push_back(original);
+	}
 }
