@@ -22,7 +22,7 @@ class DPMAgent : public BssidNode
         int associate(const std::string& bssid, const std::string& virtual_interface, const std::string& ethernet_interface = std::string("eth1"));
         int disassociate(const std::string& bssid, const std::string& virtual_interface, const std::string& ethernet_interface = std::string("eth1"));
         // Periodically check hostapd and associate/disassociate
-        void timed_check(int period);
+        void timed_check(float seconds);
         // override BssidNode
         int sync(int operation_code, void* bssid);
     private:

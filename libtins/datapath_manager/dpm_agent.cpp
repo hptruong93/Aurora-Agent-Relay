@@ -97,7 +97,7 @@ int DPMAgent::disassociate(const std::string& bssid, const std::string& virtual_
     return execute_command("disassociate" + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface + " " + bssid);
 }
 
-void DPMAgent::timed_check(int period)
+void DPMAgent::timed_check(float seconds)
 {
     while (true)
     {
@@ -152,7 +152,7 @@ void DPMAgent::timed_check(int period)
         // Update associated mac addr
         associated_mac_addr = new_associated;
 
-        sleep(period);
+        sleep(seconds);
     }
 }
 
