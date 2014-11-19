@@ -5,29 +5,6 @@
 #include <unistd.h>
 #include <algorithm>
 
-char* get_interface_name(const std::string& addr)
-{
-    FILE *fp;
-    char *interface_name = (char*)malloc(64);
-    size_t interface_name_len = 0;
-    int c;
-    std::string command = std::string("ifconfig | grep -E ") + std::string("'") +  std::string("HWaddr ") + addr + std::string("'");
-    fp = popen(command.c_str(), "r");
-
-    while ((c = fgetc(fp)) != EOF)
-    {
-        if ((char) c == ' ')
-        {
-            break;
-        }
-        interface_name[interface_name_len++] = (char)c;
-    }
-
-    interface_name[interface_name_len] = '\0';
-
-    return interface_name;
-}
-
 DPMAgent::DPMAgent()
 {
 
@@ -68,22 +45,14 @@ void DPMAgent::initialize(std::string ovs_name)
     std::cout << "Found socket path " << socket_path << std::endl;
 }
 
-int DPMAgent::add(const std::string& bssid, const std::string& ethernet_interface)
+int DPMAgent::add(const std::string& virtual_interface, const std::string& ethernet_interface)
 {
-    char* interface_name = get_interface_name(bssid);
-    std::string virtual_interface = std::string(interface_name);
-    free(interface_name);
-
     std::cout<<"Command: "<<"add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface<<std::endl;
     return execute_command("add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);
 }
 
-int DPMAgent::remove(const std::string& bssid, const std::string& ethernet_interface)
+int DPMAgent::remove(const std::string& virtual_interface, const std::string& ethernet_interface)
 {
-    char* interface_name = get_interface_name(bssid);
-    std::string virtual_interface = std::string(interface_name);
-    free(interface_name);
-
     return execute_command("remove " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);   
 }
 
@@ -101,56 +70,49 @@ void DPMAgent::timed_check(float seconds)
 {
     while (true)
     {
-        // Call hostapd
-        FILE *fp;
-        char *output_str = (char*)malloc(1024 * sizeof(char));
-        int index = 0;
-        char c = 's';
-
-        fp = popen((std::string(BASE_COMMAND_STR) + " " + "init" + " " + ovs_name).c_str(), "r");
-        while ((c = fgetc(fp)) != EOF)
+        // Main check function
+        for (std::map<std::string, std::set<std::string>>::iterator it = interface_mac.begin(); it != interface_mac.end(); it++)
         {
+            std::string virtual_interface = it->first;
 
-            output_str[index++] = c;
-        }
-        output_str[index] = '\0';
+            // Call hostapd command
+            char *output_str = get_command_output(std::string(HOSTAPD_COMMNAD) + virtual_interface);
+            std::string output(output_str);
+            free(output_str);
 
-        std::string output(output_str);
-        free(output_str);
+            // Get all mac addr from command output
+            std::set<std::string> output_mac_addr;
+            split_string(output, "\n", &output_mac_addr);
 
-        std::vector<std::string> output_mac_addr;
-        split_string(output, "\n", &output_mac_addr);
+            // Common mac addr
+            std::vector<std::string> common_vec;
+            std::set_intersection(it->second.begin(), it->second.end(), output_mac_addr.begin(), output_mac_addr.end(), std::back_inserter(common_vec));
+            std::set<std::string> common(common_vec.begin(), common_vec.end());
 
-        std::vector<std::string> new_associated;
+            // To be associated
+            std::vector<std::string> to_associate;
+            std::set_difference(output_mac_addr.begin(), output_mac_addr.end(), common.begin(), common.end(), std::back_inserter(to_associate));
 
-        // Associate new mac addresses
-        for (int i = 0; i < output_mac_addr.size(); i++)
-        {
-            // Hacky way of detecting a mac address
-            if (output_mac_addr[i].length() == 17)
+            // To be disassociated
+            std::vector<std::string> to_disassociate;
+            std::set_difference(it->second.begin(), it->second.end(), common.begin(), common.end(), std::back_inserter(to_disassociate));
+
+            // Associate new mac addr
+            for (int i = 0; i < to_associate.size(); i++)
             {
-                if (std::find(associated_mac_addr.begin(), associated_mac_addr.end(), output_mac_addr[i]) == associated_mac_addr.end())
-                {
-                    // Temporary
-                    associate(output_mac_addr[i], "wlan0", "eth1");
-                }
-
-                new_associated.push_back(associated_mac_addr[i]);
+                associate(to_associate[i], virtual_interface);
             }
-        }
 
-        // Disassociate old mac addresses
-        for (int i = 0; i < associated_mac_addr.size(); i++)
-        {
-            if (std::find(new_associated.begin(), new_associated.end(), associated_mac_addr[i]) == new_associated.end())
+            // Disassociate old mac addr
+            for (int i = 0; i < to_disassociate.size(); i++)
             {
-                // Temporary
-                disassociate(output_mac_addr[i], "wlan0", "eth1");
+                disassociate(to_disassociate[i], virtual_interface);
             }
-        }
 
-        // Update associated mac addr
-        associated_mac_addr = new_associated;
+            // Update associated mac addr
+            it->second.clear();
+            it->second = output_mac_addr;
+        }
 
         sleep(seconds);
     }
@@ -159,12 +121,32 @@ void DPMAgent::timed_check(float seconds)
 int DPMAgent::sync(int operation_code, void* bssid)
 {
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
+
+    char* interface_name = get_interface_name(std::string((char*)bssid));
+    std::string virtual_interface = std::string(interface_name);
+    free(interface_name);
+
     switch(op)
     {
         case BSSID_NODE_OPS::BSSID_ADD:
-            return add(std::string((char*)bssid));
+            // Add new virutal interface to map
+            if (interface_mac.find(virtual_interface) == interface_mac.end())
+            {
+                interface_mac.insert(std::pair<std::string, std::set<std::string>>(virtual_interface, std::set<std::string>()));
+            }
+
+            // Execute add command
+            return add(virtual_interface);
         case BSSID_NODE_OPS::BSSID_REMOVE:
-            return remove(std::string((char*)bssid));
+            // Disassociate all devices connected to virutal interface
+            for (std::set<std::string>::iterator it = interface_mac.at(virtual_interface).begin(); it != interface_mac.at(virtual_interface).end(); it++)
+            {
+                disassociate(*it, virtual_interface);
+            }
+            interface_mac.erase(virtual_interface);
+
+            // Execute remove command
+            return remove(virtual_interface);
     }
 }
 
