@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <thread>
 
-#define BASE_COMMAND_STR            "python -u ../temp_test/datapath_manager.py"
+#define BASE_COMMAND_STR            "python -u ../datapath_manager/datapath_manager.py"
 #define DEFAULT_OVS_NAME			"tb"
 
 class DPMAgent : public BssidNode
@@ -27,6 +27,8 @@ class DPMAgent : public BssidNode
     	std::string ovs_name;
     	std::string socket_path;
     	std::unique_ptr<std::thread> ovs_thread;
+        unsigned int virtual_ethernet_count;
+        unsigned int virtual_wlan_count;
     	void initialize(std::string ovs);
         int execute_command(std::string command);
 };

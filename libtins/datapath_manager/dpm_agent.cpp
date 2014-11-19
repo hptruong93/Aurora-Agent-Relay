@@ -28,7 +28,8 @@ char* get_interface_name(const std::string& addr)
 
 DPMAgent::DPMAgent()
 {
-
+    this->virtual_ethernet_count = 0;
+    this->virtual_wlan_count = 0;
 }
 
 int DPMAgent::init(const std::string& init_ovs_name)
@@ -69,11 +70,29 @@ void DPMAgent::initialize(std::string ovs_name)
 int DPMAgent::add(const std::string& bssid, const std::string& ethernet_interface)
 {
     char* interface_name = get_interface_name(bssid);
-    std::string virtual_interface = std::string(interface_name);
+
+    std::string virtual_interface = std::string("v" + std::string(interface_name) + "data" + std::to_string(this->virtual_wlan_count));
+    this->virtual_wlan_count++;
+
+    std::string virtual_ethernet;
+    virtual_ethernet = std::string("v" + std::string(ethernet_interface) + "data" + std::to_string(this->virtual_ethernet_count));
+    if (this->virtual_ethernet_count == 0) {
+        this->virtual_ethernet_count++;
+    }
+    
+    std::cout << "Creating virtual interfaces... " << virtual_interface << " and " << virtual_ethernet << std::endl;
+    system(("vethd -v " + virtual_interface + " -e " + std::string(interface_name)).c_str());
+    system(("ifconfig " + virtual_interface + " up").c_str());
+
+    if (this->virtual_ethernet_count == 1) {
+        system(("vethd -v " + virtual_ethernet + " -e " + ethernet_interface).c_str());
+        system(("ifconfig " + virtual_ethernet + " up").c_str());
+    }
+
     free(interface_name);
 
-    std::cout<<"Command: "<<"add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface<<std::endl;
-    return execute_command("add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);
+    std::cout<<"Command: " << "add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet <<std::endl;
+    return execute_command("add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet);
 }
 
 int DPMAgent::remove(const std::string& bssid, const std::string& ethernet_interface)

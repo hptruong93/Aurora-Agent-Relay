@@ -61,7 +61,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
         uint8_t packet_type = WARP_protocol::check_warp_layer_type(warp_layer_buffer);
         uint32_t data_processed_length = 0;
         
-        printf("Type is %d\n", packet_type);
+        //printf("Type is %d\n", packet_type);
 
         switch(packet_type)
         {
@@ -78,7 +78,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 break;
         }
 
-        cout << "Data processed length: " << data_processed_length << endl;
+        //cout << "Data processed length: " << data_processed_length << endl;
 
         if (data_processed_length != 0) {//Has some data to forward to interface
             if (packet_type == TYPE_TRANSMIT) {
