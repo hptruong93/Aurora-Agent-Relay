@@ -40,7 +40,7 @@ void print_packet(uint8_t* packet, uint32_t length) {
 	printf("\n");
 }
 
-char* getInterface(Tins::Dot11::address_type addr) {
+char* get_interface(Tins::Dot11::address_type addr) {
     string address = addr.to_string();
 
     if (address == "ff:ff:ff:ff:ff:ff")
@@ -101,10 +101,12 @@ char* getInterface(Tins::Dot11::address_type addr) {
 
     interface_name[interface_name_len] = '\0';
 
+    fclose(fp);
+
     return interface_name;
 }
 
-char* getInterfaceName(const std::string& addr)
+char* get_interface_name(const std::string& addr)
 {
     FILE *fp;
     char *interface_name = (char*)malloc(64);
@@ -124,7 +126,29 @@ char* getInterfaceName(const std::string& addr)
 
     interface_name[interface_name_len] = '\0';
 
+    fclose(fp);
+
     return interface_name;
+}
+
+char* get_command_output(const std::string& command)
+{
+    FILE *fp;
+    char *output = (char*)malloc(1024);
+    size_t index = 0;
+
+    fp = popen(command.c_str(), "r");
+    char c;
+    while((c = fgetc(fp)) != EOF)
+    {
+        output[index++] = c;
+    }
+
+    output[index] = 0;
+
+    fclose(fp);
+
+    return output;
 }
 
 void split_string(std::string& original, const std::string& delimiter, std::vector<std::string> *splits)
@@ -140,4 +164,19 @@ void split_string(std::string& original, const std::string& delimiter, std::vect
 	{
 		splits->push_back(original);
 	}
+}
+
+void split_string(std::string& original, const std::string& delimiter, std::set<std::string> *splits)
+{
+    int pos;
+    while ((pos = original.find(delimiter)) != std::string::npos)
+    {
+        splits->insert(original.substr(0, pos));
+        original.erase(0, pos + delimiter.length());
+    }
+
+    if (original.length() > 0 && original != " ")
+    {
+        splits->insert(original);
+    }
 }

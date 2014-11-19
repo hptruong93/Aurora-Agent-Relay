@@ -93,7 +93,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(assembled_data, data_length);
 
-                    char* interface_name = getInterface(dot11.addr1());
+                    char* interface_name = get_interface(dot11.addr1());
 
                     // Length 4 for prefix "mon."
                     if (strlen(interface_name) > 4) {

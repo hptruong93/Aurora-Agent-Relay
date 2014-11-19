@@ -99,6 +99,9 @@ int main(int argc, char *argv[])
         comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
+
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 1.0);
+        dpm_timed_check_thread.detach();
     }
     else
     {
@@ -128,6 +131,9 @@ int main(int argc, char *argv[])
         comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
+
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 1.0);
+        dpm_timed_check_thread.detach();
     }
 
     // Agent Factory
