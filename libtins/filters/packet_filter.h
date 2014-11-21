@@ -7,11 +7,12 @@ namespace PacketFilter {
 	//Template filter
 	class PacketFilter {
         public:
+            PacketFilter();
             PacketFilter(PacketFilter* extra);
             bool filter(Tins::PDU *packet);
+            ~PacketFilter();
             
         protected:
-        	~PacketFilter();
             virtual bool internal_filtering(Tins::PDU *packet);
 
         private:

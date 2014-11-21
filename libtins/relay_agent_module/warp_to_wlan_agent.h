@@ -9,6 +9,7 @@
 
 #include "relay_agent.h"
 #include "bssid_node.h"
+#include "packet_filter.h"
 
 #include <semaphore.h>
 
@@ -24,6 +25,7 @@ namespace RelayAgents {
             int timed_sync(int operation_code, void* response, int timeout);
             int sync(int operation_code, void* bssid);
         private:
+            PacketFilter::PacketFilter filter;
         	sem_t mac_control_sync;
         	sem_t transmission_sync;
             uint8_t response_packet_type;

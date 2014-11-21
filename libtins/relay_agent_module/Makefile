@@ -29,29 +29,29 @@ all: agents
 ########################################  Linking  ########################################################
 
 agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o packet_filter.o management_filter.o dot11_filter.o
-	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o $(LFLAGS) -o agents.out
+	$(CC) util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sender.o relay_agent.o wlan_to_warp_agent.o mon_to_warp_agent.o warp_to_wlan_agent.o comms_agent.o dpm_agent.o agents.o packet_filter.o management_filter.o dot11_filter.o $(LFLAGS) -o agents.out
 
 ###################################Compiling main files####################################################
 dpm_agent.o: $(DPM_DIR)dpm_agent.cpp
 	$(CC) $(DPM_DIR)dpm_agent.cpp $(CFLAGS) $(INC_RELAY_AGENT) $(INC_UTILITY) -o dpm_agent.o
 
 comms_agent.o: comms_agent.cpp
-	$(CC) comms_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o comms_agent.o
+	$(CC) comms_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_FILTER) $(INC_UTILITY) -o comms_agent.o
 
 wlan_to_warp_agent.o : wlan_to_warp_agent.cpp
 	$(CC) wlan_to_warp_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o wlan_to_warp_agent.o
 
 mon_to_warp_agent.o : mon_to_warp_agent.cpp
-	$(CC) mon_to_warp_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o mon_to_warp_agent.o
+	$(CC) mon_to_warp_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_FILTER) $(INC_UTILITY) -o mon_to_warp_agent.o
 
 warp_to_wlan_agent.o : warp_to_wlan_agent.cpp
-	$(CC) warp_to_wlan_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o warp_to_wlan_agent.o
+	$(CC) warp_to_wlan_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_FILTER) $(INC_UTILITY) -o warp_to_wlan_agent.o
 
 relay_agent.o : relay_agent.cpp
 	$(CC) relay_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o relay_agent.o
 
 agents.o : agents.cpp
-	$(CC) agents.cpp $(CFLAGS) $(INC_DPM) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o agents.o
+	$(CC) agents.cpp $(CFLAGS) $(INC_DPM) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_FILTER) $(INC_UTILITY) -o agents.o
 
 ##################################Files to link later######################################################
 

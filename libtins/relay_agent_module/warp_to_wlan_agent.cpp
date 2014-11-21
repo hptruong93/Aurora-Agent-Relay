@@ -18,6 +18,7 @@
 #include "warp_protocol_sender.h"
 #include "fragment_receiver.h"
 #include "warp_protocol.h"
+#include "packet_filter.h"
 
 #include "test.h"
 
@@ -88,7 +89,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
                 Dot11 dot11(assembled_data, data_length);
                 auto type = dot11.type();
-                if (type == Dot11::MANAGEMENT) {
+                if (filter.filter(&dot11)) {
                     //Put in radio tap and send to output
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(assembled_data, data_length);

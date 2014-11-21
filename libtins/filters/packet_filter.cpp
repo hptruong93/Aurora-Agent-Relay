@@ -4,6 +4,7 @@ using namespace Tins;
 
 namespace PacketFilter {
 
+	PacketFilter::PacketFilter() : decorator(nullptr) {};
 	PacketFilter::PacketFilter(PacketFilter* extra) : decorator(extra) {};
 
 	PacketFilter::~PacketFilter() {

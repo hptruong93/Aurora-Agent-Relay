@@ -20,6 +20,7 @@
 #include "warp_protocol_sender.h"
 #include "fragment_receiver.h"
 #include "warp_protocol.h"
+#include "packet_filter.h"
 
 using namespace Tins;
 using namespace Config;
@@ -39,6 +40,7 @@ namespace RelayAgents {
             // Static methods and constants
             static bool Is_Management_Frame(int type);
         private:
+            PacketFilter::PacketFilter filter;
     };
 }
 
