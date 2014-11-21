@@ -22,5 +22,6 @@ char* get_interface_name(const std::string& addr);
 char* get_command_output(const std::string& command);
 void split_string(std::string& original, const std::string& delimiter, std::vector<std::string> *splits);
 void split_string(std::string& original, const std::string& delimiter, std::set<std::string> *splits);
+void get_pid(std::string& command_line_regex, std::vector<int> *pids, int limit);
 
 #endif

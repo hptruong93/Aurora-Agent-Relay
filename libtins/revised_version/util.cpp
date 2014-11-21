@@ -180,3 +180,23 @@ void split_string(std::string& original, const std::string& delimiter, std::set<
         splits->insert(original);
     }
 }
+
+void get_pid(std::string& command_line_regex, std::vector<int> *pids, int limit) {
+    char* output = get_command_output(std::string("ps -ef | grep \"" + command_line_regex + "\" | awk '{print $2;}'"));
+
+    std::vector<std::string> pid_string;
+    std::string output_string(output);
+    split_string(output_string, "\n", &pid_string);
+
+    int count = 0;
+    for (std::vector<std::string>::iterator it = pid_string.begin(); it != pid_string.end(); it++) {
+        int found_pid = std::atoi((*it).c_str());
+        pids->push_back(found_pid);
+        count++;
+        if (count >= limit) {
+            break;
+        }
+    }
+
+    free(output);
+}

@@ -12,9 +12,12 @@ INC_SEND_MODULE = -I$(SEND_RECEIVE_MODULE_DIR)
 
 ###########################################################################################################
 
-all : mon_to_warp wlan_to_warp warp_to_wlan
+all : test
 
 ###################################Linking files together##################################################
+
+test : util.o test.o
+	$(CC) util.o test.o $(LFLAGS) -o test.out
 
 mon_to_warp : util.o config.o warp_protocol.o  warp_protocol_sender.o mon_to_warp.o
 	$(CC) util.o config.o warp_protocol.o  warp_protocol_sender.o mon_to_warp.o $(LFLAGS) -o mon_to_warp.out
@@ -35,6 +38,9 @@ mon_to_warp.o : mon_to_warp.cpp
 
 warp_to_wlan.o : warp_to_wlan.cpp
 	$(CC) warp_to_wlan.cpp $(CFLAGS) -o warp_to_wlan.o
+
+test.o : test.cpp
+	$(CC) test.cpp $(CFLAGS) -o test.o
 
 ##################################Files to link later######################################################
 

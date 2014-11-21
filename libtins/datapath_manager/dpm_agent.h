@@ -12,7 +12,7 @@
 
 #define BASE_COMMAND_STR            "python -u ../datapath_manager/datapath_manager.py"
 #define DEFAULT_OVS_NAME			"tb"
-#define HOSTAPD_COMMNAD             "hostapd_cli all_sta -i "
+#define ALL_STATION_COMMAND             "hostapd_cli all_sta -i "
 
 class DPMAgent : public BssidNode
 {
@@ -32,8 +32,10 @@ class DPMAgent : public BssidNode
     	std::string socket_path;
     	std::unique_ptr<std::thread> ovs_thread;
         unsigned int virtual_ethernet_count;
-        unsigned int virtual_wlan_count;
-        // Store added interface names and associated mac addresses
+        // Store virtual wlan interfaces and pid
+        std::map<std::string, int> vwlan_pids;
+
+        // Store added interface names and associated station mac addresses
         std::map<std::string, std::set<std::string>> interface_mac;
     	void initialize(std::string ovs);
         int execute_command(std::string command);

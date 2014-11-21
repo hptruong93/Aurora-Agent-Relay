@@ -5,10 +5,11 @@
 #include <unistd.h>
 #include <algorithm>
 
+using namespace std;
+
 DPMAgent::DPMAgent()
 {
     this->virtual_ethernet_count = 0;
-    this->virtual_wlan_count = 0;
 }
 
 int DPMAgent::init(const std::string& init_ovs_name)
@@ -43,39 +44,52 @@ void DPMAgent::initialize(std::string ovs_name)
     line_str.erase(0, line_str.find('/'));
 
     socket_path = line_str;
-    std::cout << "Found socket path " << socket_path << std::endl;
+    //std::cout << "Found socket path " << socket_path << std::endl;
 }
 
-int DPMAgent::add(const std::string& virtual_interface, const std::string& ethernet_interface)
+int DPMAgent::add(const std::string& wlan_interface, const std::string& ethernet_interface)
 {
-    char* interface_name = get_interface_name(bssid);
-
-    std::string virtual_interface = std::string("v" + std::string(interface_name) + "data" + std::to_string(this->virtual_wlan_count));
-    this->virtual_wlan_count++;
+    std::string virtual_interface = std::string("v" + std::string(wlan_interface) + "-dpm");
 
     std::string virtual_ethernet;
-    virtual_ethernet = std::string("v" + std::string(ethernet_interface) + "data" + std::to_string(this->virtual_ethernet_count));
+    virtual_ethernet = std::string("v" + std::string(ethernet_interface) + "-dpm");
     if (this->virtual_ethernet_count == 0) {
         this->virtual_ethernet_count++;
     }
     
     std::cout << "Creating virtual interfaces... " << virtual_interface << " and " << virtual_ethernet << std::endl;
-    system(("vethd -v " + virtual_interface + " -e " + std::string(interface_name)).c_str());
+    system(("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface)).c_str());
     system(("ifconfig " + virtual_interface + " up").c_str());
+
+    //Getting vethd pid for the created interface
+    std::string a("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface));
+    std::vector<int> v;
+    get_pid(a, &v, 1);
+    printf("Found pid %d\n", *(v.begin()));
+    vwlan_pids.insert(std::pair<std::string, int>(std::string(wlan_interface), *(v.begin())));
 
     if (this->virtual_ethernet_count == 1) {
         system(("vethd -v " + virtual_ethernet + " -e " + ethernet_interface).c_str());
         system(("ifconfig " + virtual_ethernet + " up").c_str());
     }
 
-    free(interface_name);
-
     std::cout<<"Command: " << "add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet <<std::endl;
     return execute_command("add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet);
 }
 
-int DPMAgent::remove(const std::string& virtual_interface, const std::string& ethernet_interface)
+int DPMAgent::remove(const std::string& wlan_interface, const std::string& ethernet_interface)
 {
+    //Get pid 
+    auto search = vwlan_pids.find(wlan_interface);
+    if(search != vwlan_pids.end()) {
+        std::cout << "Found ----------------------------------- " << search->first << " " << search->second << '\n';
+    }
+
+    cout << "--------------------" << ("kill -SIGTERM " + std::to_string(search->second)) << endl;
+    system(("kill -SIGTERM " + std::to_string(search->second)).c_str());
+    vwlan_pids.erase(wlan_interface);
+
+    std::string virtual_interface = std::string("v" + std::string(wlan_interface) + "-dpm");
     return execute_command("remove " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);   
 }
 
@@ -99,7 +113,7 @@ void DPMAgent::timed_check(float seconds)
             std::string virtual_interface = it->first;
 
             // Call hostapd command
-            char *output_str = get_command_output(std::string(HOSTAPD_COMMNAD) + virtual_interface);
+            char *output_str = get_command_output(std::string(ALL_STATION_COMMAND + virtual_interface));
             std::string output(output_str);
             free(output_str);
 
