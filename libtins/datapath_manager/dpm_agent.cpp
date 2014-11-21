@@ -141,12 +141,16 @@ void DPMAgent::timed_check(float seconds)
                 // associate(to_associate[i], virtual_interface);
                 // Build json
                 // Format: {"command": _cmd, "changes": {"bssid": _bssid, "macaddr": _mac_addr}}
-                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + MAC_ASSOCIATE_CMD + COMMA
+                std::cout << "to associate: " << to_associate[i] << std::endl;
+
+                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + QUOTE + MAC_ASSOCIATE_CMD + QUOTE + COMMA
                                                 + QUOTE + JSON_CHANGES + QUOTE + COLON + LEFT_BRACKET
-                                                + QUOTE + JSON_BSSID + QUOTE + COLON + interface_bssid.at(virtual_interface) + COMMA
-                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + to_associate[i]
+                                                + QUOTE + JSON_BSSID + QUOTE + COLON + QUOTE + interface_bssid.at(virtual_interface) + QUOTE + COMMA
+                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + QUOTE + to_associate[i] + QUOTE
                                                 + RIGHT_BRACKET
                                                 + RIGHT_BRACKET);
+
+                std::cout << "Umm : " << json_associate << std::endl;
 
                 this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }
@@ -157,12 +161,15 @@ void DPMAgent::timed_check(float seconds)
                 // disassociate(to_disassociate[i], virtual_interface)
                 // Build json
                 // Format: {"command": _cmd, "changes": {"bssid": _bssid, "macaddr": _mac_addr}}
-                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + MAC_DISASSOCIATE_CMD + COMMA
+                std::cout << "to disassociate: " << to_disassociate[i] << std::endl;
+                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + QUOTE + MAC_DISASSOCIATE_CMD + QUOTE + COMMA
                                                 + QUOTE + JSON_CHANGES + QUOTE + COLON + LEFT_BRACKET
-                                                + QUOTE + JSON_BSSID + QUOTE + COLON + interface_bssid.at(virtual_interface) + COMMA
-                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + to_associate[i]
+                                                + QUOTE + JSON_BSSID + QUOTE + COLON + QUOTE + interface_bssid.at(virtual_interface) + QUOTE + COMMA
+                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + QUOTE + to_disassociate[i] + QUOTE
                                                 + RIGHT_BRACKET
                                                 + RIGHT_BRACKET);
+
+                std::cout << "Umm : " << json_associate << std::endl;
 
                 this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }

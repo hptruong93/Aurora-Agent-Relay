@@ -73,7 +73,7 @@ char* get_interface(Tins::Dot11::address_type addr) {
 
     	interfaces[interfaces_index] = '\0';
 
-    	cout << "Interfaces are: " << interfaces << endl;
+    	// cout << "Interfaces are: " << interfaces << endl;
 
     	return interfaces;
     }

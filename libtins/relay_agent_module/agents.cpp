@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
     {
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
+        dpm->set_agent((BssidNode*)comms_agent.get());
 
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
@@ -100,13 +101,14 @@ int main(int argc, char *argv[])
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
-        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 1.0);
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 4.0);
         dpm_timed_check_thread.detach();
     }
     else
     {
         // Comms Agent
         comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
+        dpm->set_agent((BssidNode*)comms_agent.get());
 
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
