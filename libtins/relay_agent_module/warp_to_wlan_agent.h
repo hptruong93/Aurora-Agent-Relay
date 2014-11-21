@@ -28,6 +28,7 @@ namespace RelayAgents {
             PacketFilter::PacketFilter filter;
         	sem_t mac_control_sync;
         	sem_t transmission_sync;
+            sem_t bssid_control_sync;
             uint8_t response_packet_type;
     };   
 }

@@ -1,4 +1,5 @@
 #include "dpm_agent.h"
+#include "comms_agent.h"
 #include "util.h"
 
 #include <iostream>
@@ -137,13 +138,33 @@ void DPMAgent::timed_check(float seconds)
             // Associate new mac addr
             for (int i = 0; i < to_associate.size(); i++)
             {
-                associate(to_associate[i], virtual_interface);
+                // associate(to_associate[i], virtual_interface);
+                // Build json
+                // Format: {"command": _cmd, "changes": {"bssid": _bssid, "macaddr": _mac_addr}}
+                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + MAC_ASSOCIATE_CMD + COMMA
+                                                + QUOTE + JSON_CHANGES + QUOTE + COLON + LEFT_BRACKET
+                                                + QUOTE + JSON_BSSID + QUOTE + COLON + interface_bssid.at(virtual_interface) + COMMA
+                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + to_associate[i]
+                                                + RIGHT_BRACKET
+                                                + RIGHT_BRACKET);
+
+                this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }
 
             // Disassociate old mac addr
             for (int i = 0; i < to_disassociate.size(); i++)
             {
-                disassociate(to_disassociate[i], virtual_interface);
+                // disassociate(to_disassociate[i], virtual_interface)
+                // Build json
+                // Format: {"command": _cmd, "changes": {"bssid": _bssid, "macaddr": _mac_addr}}
+                std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + MAC_DISASSOCIATE_CMD + COMMA
+                                                + QUOTE + JSON_CHANGES + QUOTE + COLON + LEFT_BRACKET
+                                                + QUOTE + JSON_BSSID + QUOTE + COLON + interface_bssid.at(virtual_interface) + COMMA
+                                                + QUOTE + JSON_MAC_ADDRESS + QUOTE + COLON + to_associate[i]
+                                                + RIGHT_BRACKET
+                                                + RIGHT_BRACKET);
+
+                this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }
 
             // Update associated mac addr
@@ -155,17 +176,37 @@ void DPMAgent::timed_check(float seconds)
     }
 }
 
-int DPMAgent::sync(int operation_code, void* bssid)
+int DPMAgent::sync(int operation_code, void* message)
 {
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
 
-    char* interface_name = get_interface_name(std::string((char*)bssid));
-    std::string virtual_interface = std::string(interface_name);
-    free(interface_name);
+    std::string msg((char*)message);
+    std::string virtual_interface;
+
+    // Parse the message depending on different op codes
+    if (op == BSSID_NODE_OPS::BSSID_ADD || op == BSSID_NODE_OPS::BSSID_REMOVE)
+    {
+        char* interface_name = get_interface_name(msg);
+        virtual_interface = std::string(interface_name);
+        free(interface_name);
+    }
+    else if (op == BSSID_NODE_OPS::BSSID_MAC_ASSOCIATE || op == BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE)
+    {
+        char* interface_name = get_interface_name(msg.substr(0, msg.find("|")));
+        virtual_interface = std::string(interface_name);
+        free(interface_name);
+    }
 
     switch(op)
     {
         case BSSID_NODE_OPS::BSSID_ADD:
+            // Add interface and its bssid
+            if (interface_bssid.find(virtual_interface) == interface_bssid.end())
+            {
+                interface_bssid.insert(std::pair<std::string, std::string>(virtual_interface, std::string((char*)message)));
+                bssid_interface.insert(std::pair<std::string, std::string>(std::string((char*)message), virtual_interface));
+            }
+
             // Add new virutal interface to map
             if (interface_mac.find(virtual_interface) == interface_mac.end())
             {
@@ -181,9 +222,15 @@ int DPMAgent::sync(int operation_code, void* bssid)
                 disassociate(*it, virtual_interface);
             }
             interface_mac.erase(virtual_interface);
+            bssid_interface.erase(interface_bssid.at(virtual_interface));
+            interface_bssid.erase(virtual_interface);
 
             // Execute remove command
             return remove(virtual_interface);
+        case BSSID_NODE_OPS::BSSID_MAC_ASSOCIATE:
+            return associate(msg.substr(msg.find("|") + 1), virtual_interface);
+        case BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE:
+            return disassociate(msg.substr(msg.find("|") + 1), virtual_interface);
     }
 }
 

@@ -25,8 +25,10 @@
 // Command types from received json object
 #define RADIO_SET_CMD                   "_radio_set_command"
 #define RADIO_BULK_SET_CMD              "_bulk_radio_set_command"
-#define UCI_DELETE_SECTION              "_uci_delete_section_name"
-#define UCI_DELETE_BSS                  "_uci_delete_bss_index"
+#define UCI_DELETE_SECTION              "_delete_section_name"
+#define UCI_DELETE_BSS                  "_delete_bss_index"
+#define MAC_ASSOCIATE_CMD               "_mac_associate"
+#define MAC_DISASSOCIATE_CMD            "_mac_disassociate"
 
 // Json parameters
 #define JSON_COMMAND                    "command"
@@ -36,6 +38,7 @@
 #define JSON_HW_MODE                    "hwmode"
 #define JSON_TX_POWER                   "txpower"
 #define JSON_DISABLED                   "disabled"
+#define JSON_BSSID                      "bssid"
 
 // Command for factory
 #define WLAN_TO_WARP                    "wlan_to_warp"
@@ -52,7 +55,7 @@ namespace RelayAgents {
     };
 
     // Utility class
-    class CommsAgent {
+    class CommsAgent : public BssidNode {
         std::unique_ptr<std::string> send_port;
         std::unique_ptr<std::string> recv_port;
         std::unique_ptr<std::string> peer_ip_addr;
@@ -74,6 +77,8 @@ namespace RelayAgents {
             void update_bssids(int operation_code, void* bssid);
             void add_to_bssid_group(BssidNode* node);
             void set_warp_to_wlan_agent(BssidNode* agent);
+            // Override
+            int sync(int operation_code, void* command);
         private:
             std::mutex bssid_update_group_mux;
             std::mutex warp_to_wlan_agent_mux;

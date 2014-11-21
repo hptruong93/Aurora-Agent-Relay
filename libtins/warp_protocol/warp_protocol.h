@@ -15,7 +15,8 @@
 //Length of elements
 #define TRANSMIT_ELEMENT_LENGTH                       7
 #define MAC_CONTROL_ELEMENT_LENGTH                    7
-#define TRANSMISSION_CONTROL_ELEMENT_LENGTH           11        
+#define TRANSMISSION_CONTROL_ELEMENT_LENGTH           11 
+#define BSSID_CONTROL_ELEMENT_LENGTH                  8         // This is the length WITHOUT mac addresses!!!       
 
 #define TYPE_INDEX                                    0
 #define SUBTYPE_INDEX                                 1
@@ -44,6 +45,7 @@
 //For type = control
 #define SUBTYPE_MAC_ADDRESS_CONTROL                   4
 #define SUBTYPE_TRANSMISSION_CONTROL                  8
+#define SUBTYPE_BSSID_CONTROL                         12
 
 // For subtype = transmission control
 #define TRANSMISSION_CONFIGURE_CODE                   1
@@ -53,13 +55,13 @@
 #define TRANSMISSION_CONFIGURE_SUCCESS_CODE           8
 #define TRANSMISSION_CONFIGURE_FAIL_CODE              16
 
-#define NUM_ELEMENT_INDEX                             2
+#define TRANSMISSION_NUM_ELEMENT_INDEX                2
 #define TRANSMISSION_OPERATION_CODE_INDEX             3
-#define DISABLED_INDEX                                10
-#define TX_POWER_INDEX                                11
-#define CHANNEL_INDEX                                 12
-#define RATE_INDEX                                    13
-#define HW_MODE_INDEX                                 14
+#define TRANSMISSION_DISABLED_INDEX                   10
+#define TRANSMISSION_TX_POWER_INDEX                   11
+#define TRANSMISSION_CHANNEL_INDEX                    12
+#define TRANSMISSION_RATE_INDEX                       13
+#define TRANSMISSION_HW_MODE_INDEX                    14
 
 // For subtype = mac adress control
 #define NOTHING_CODE                                  0
@@ -71,6 +73,17 @@
 #define MAC_NOT_EXISTED_CODE                          66
 
 #define OPERTAION_CODE_INDEX                          2
+
+// For subtype = bssid control
+#define BSSID_STATION_ASSOCIATE_CODE                  1
+#define BSSID_STATION_DISASSOCIATE_CODE               32
+#define BSSID_STATION_EXISTED_CODE                    65
+#define BSSID_STATION_NOT_EXISTED_CODE                66
+
+#define BSSID_NUM_ELEMENT_INDEX                       2
+#define BSSID_BSSID_INDEX                             3
+#define BSSID_OPERATION_CODE_INDEX                    9
+#define BSSID_STATION_MAC_ADDR_INDEX                  10
 
 #define DEFAULT_TRANSMIT_POWER                        0
 #define DEFAULT_TRANSMIT_RATE                         1
@@ -126,6 +139,13 @@ namespace Tins {
             uint8_t hw_mode;
             uint8_t operation_code;
         };
+
+        struct WARP_bssid_control_struct {
+            uint8_t total_num_element;
+            uint8_t bssid[6];
+            uint8_t operation_code;
+            uint8_t (*mac_addr)[6];
+        };
         
         static const PDU::PDUType pdu_flag = PDU::USER_DEFINED_PDU;
 
@@ -146,6 +166,8 @@ namespace Tins {
         static WARP_protocol* create_mac_control(WARP_mac_control_struct* info);
 
         static WARP_protocol* create_transmission_control(WARP_transmission_control_struct* info);
+
+        static WARP_protocol* create_bssid_control(WARP_bssid_control_struct* info);
 
         //Constructor with buffer
         WARP_protocol(const uint8_t *data, uint32_t total_sz);

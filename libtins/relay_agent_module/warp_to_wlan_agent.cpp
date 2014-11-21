@@ -38,6 +38,8 @@ WarpToWlanAgent::WarpToWlanAgent() : RelayAgent()
     sem_wait(&this->mac_control_sync);
     sem_init(&this->transmission_sync, 0, 1);
     sem_wait(&this->transmission_sync);
+    sem_init(&this->bssid_control_sync, 0, 1);
+    sem_wait(&this->bssid_control_sync);
 }
 
 WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(init_packet_sender)
@@ -46,6 +48,8 @@ WarpToWlanAgent::WarpToWlanAgent(PacketSender* init_packet_sender) : RelayAgent(
     sem_wait(&this->mac_control_sync);
     sem_init(&this->transmission_sync, 0, 1);
     sem_wait(&this->transmission_sync);
+    sem_init(&this->bssid_control_sync, 0, 1);
+    sem_wait(&this->bssid_control_sync);
 }
 
 bool WarpToWlanAgent::process(PDU &pkt)
@@ -56,9 +60,12 @@ bool WarpToWlanAgent::process(PDU &pkt)
         WARP_protocol &warp_layer = ethernet_packet.rfind_pdu<WARP_protocol>();
         uint8_t* warp_layer_buffer = warp_layer.get_buffer();
 
+        // TODO: parse bssid control renponse
+
         WARP_protocol::WARP_transmit_struct transmit_result;
         WARP_protocol::WARP_transmission_control_struct transmission_result;
         WARP_protocol::WARP_mac_control_struct mac_result;
+        WARP_protocol::WARP_bssid_control_struct bssid_result;
         uint8_t packet_type = WARP_protocol::check_warp_layer_type(warp_layer_buffer);
         uint32_t data_processed_length = 0;
         
@@ -77,6 +84,9 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 cout << "Received Mac Control Packet from WARP" << endl;
                 data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &mac_result);
                 break;
+            case SUBTYPE_BSSID_CONTROL:
+                cout << "Bssid control packet response from WARP" << endl;
+
         }
 
         //cout << "Data processed length: " << data_processed_length << endl;
@@ -121,6 +131,9 @@ bool WarpToWlanAgent::process(PDU &pkt)
             } else if (packet_type == SUBTYPE_MAC_ADDRESS_CONTROL) {
                 this->response_packet_type = mac_result.operation_code;
                 sem_post(&this->mac_control_sync);
+            } else if (packet_type == SUBTYPE_BSSID_CONTROL) {
+                this->response_packet_type = bssid_result.operation_code;
+                sem_post(&this->bssid_control_sync);
             }
 
         } else {
@@ -208,6 +221,10 @@ int WarpToWlanAgent::timed_sync(int operation_code, void* response, int timeout)
             return_code = sem_timedwait(&this->transmission_sync, &ts);
             *(uint8_t*)response = this->response_packet_type;
             return return_code;
+        case BSSID_NODE_OPS::BSSID_CNTRL:
+            return_code = sem_timedwait(&this->bssid_control_sync, &ts);
+            *(uint8_t*)response = this->response_packet_type;
+            return return_code;
     }
     return return_code;
     #else
@@ -237,6 +254,9 @@ int WarpToWlanAgent::sync(int operation_code, void* data)
             return 0;
         case BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL:
             this->protocol_sender.get()->send(*(WARP_protocol*)data, TYPE_CONTROL, SUBTYPE_TRANSMISSION_CONTROL);
+            return 0;
+        case BSSID_NODE_OPS::SEND_BSSID_CNTRL:
+            this->protocol_sender.get()->send(*(WARP_protocol*)data, TYPE_CONTROL, SUBTYPE_BSSID_CONTROL);
             return 0;
     }
 

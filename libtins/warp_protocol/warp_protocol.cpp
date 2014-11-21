@@ -31,6 +31,10 @@ namespace Tins {
                 case SUBTYPE_TRANSMISSION_CONTROL:
                     ((WARP_protocol::WARP_transmission_control_struct*)result)->operation_code = input_buffer[TRANSMISSION_OPERATION_CODE_INDEX];
                     return HEADER_OFFSET + 1;
+                case SUBTYPE_BSSID_CONTROL:
+                    ((WARP_protocol::WARP_bssid_control_struct*)result)->operation_code = input_buffer[BSSID_OPERATION_CODE_INDEX];
+                    // Operation code is not immediately after the header though
+                    return HEADER_OFFSET + 1;
             }
             return 0;
         }
@@ -142,16 +146,45 @@ namespace Tins {
         //Header
         buffer[TYPE_INDEX] = TYPE_CONTROL;
         buffer[SUBTYPE_INDEX] = SUBTYPE_TRANSMISSION_CONTROL;
-        buffer[NUM_ELEMENT_INDEX] = info->total_num_element;
+        buffer[TRANSMISSION_NUM_ELEMENT_INDEX] = info->total_num_element;
         buffer[TRANSMISSION_OPERATION_CODE_INDEX] = info->operation_code;
 
         //Control
         memcpy(buffer + WARP_PROTOCOL_HEADER_LENGTH + 2, &(info->bssid[0]), 6);
-        buffer[DISABLED_INDEX] = info->disabled;
-        buffer[TX_POWER_INDEX] = info->tx_power;
-        buffer[CHANNEL_INDEX] = info->channel;
-        buffer[RATE_INDEX] = info->rate;
-        buffer[HW_MODE_INDEX] = info->hw_mode;
+        buffer[TRANSMISSION_DISABLED_INDEX] = info->disabled;
+        buffer[TRANSMISSION_TX_POWER_INDEX] = info->tx_power;
+        buffer[TRANSMISSION_CHANNEL_INDEX] = info->channel;
+        buffer[TRANSMISSION_RATE_INDEX] = info->rate;
+        buffer[TRANSMISSION_HW_MODE_INDEX] = info->hw_mode;
+
+        WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
+        std::free(buffer);
+
+        return output;
+    }
+
+    WARP_protocol* WARP_protocol::create_bssid_control(WARP_bssid_control_struct* info) {
+        uint8_t* buffer;
+        uint8_t buffer_length;
+
+        buffer_length = WARP_PROTOCOL_HEADER_LENGTH + BSSID_CONTROL_ELEMENT_LENGTH + 6 * info->total_num_element;
+        buffer = (uint8_t*) std::malloc(buffer_length * sizeof(uint8_t));
+
+        //Header
+        buffer[TYPE_INDEX] = TYPE_CONTROL;
+        buffer[SUBTYPE_INDEX] = SUBTYPE_BSSID_CONTROL;
+        buffer[BSSID_NUM_ELEMENT_INDEX] = info->total_num_element;
+        buffer[BSSID_OPERATION_CODE_INDEX] = info->operation_code;
+
+        //bssid
+        memcpy(buffer + BSSID_BSSID_INDEX, &(info->bssid[0]), 6);
+
+        // mac addresses
+        int i = 0;
+        for (; i < info->total_num_element; i++)
+        {
+            memcpy(buffer + BSSID_STATION_MAC_ADDR_INDEX + 6 * i, &(info->mac_addr[i][0]), 6);
+        }
 
         WARP_protocol* output = new WARP_protocol(buffer, buffer_length);
         std::free(buffer);

@@ -7,13 +7,19 @@ enum BSSID_NODE_OPS
     BSSID_ADD,
     BSSID_REMOVE,
     BSSID_CHECK,
+    BSSID_MAC_ASSOCIATE,
+    BSSID_MAC_DISASSOCIATE,
     // Asynchronous warp protocol
     SEND_MAC_ADDR_CNTRL,
     SEND_TRANSMISSION_CNTRL,
+    SEND_BSSID_CNTRL,
     // Synchronous Warp protocol
     MAC_ADD,
     MAC_REMOVE,
-    TRANSMISSION_CNTRL
+    TRANSMISSION_CNTRL,
+    BSSID_CNTRL,
+    // Comms agent associate/disassociate mac addr
+    COMMAND_ADD
 };
 
 class BssidNode

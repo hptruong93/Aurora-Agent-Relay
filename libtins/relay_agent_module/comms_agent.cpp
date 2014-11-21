@@ -185,7 +185,6 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
     {
-        // json_decref(command);
         // Get changes object
         json_t *changes = json_object_get(root, JSON_CHANGES);
         if (!json_is_object(changes))
@@ -228,8 +227,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_add_packet);
 
         // Wait until WARP talks back
-        int error;
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500)) == -1
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_ADD, &response, 500) == -1
             || response != MAC_ADD_CODE)
         {
             delete mac_add_packet;
@@ -303,7 +301,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         WARP_protocol *transmission_packet = WARP_protocol::create_transmission_control(transmission_control);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_TRANSMISSION_CNTRL, transmission_packet);
 
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500)) == -1
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::TRANSMISSION_CNTRL, &response, 500) == -1
             || response != TRANSMISSION_CONFIGURE_SUCCESS_CODE)
         {
             delete transmission_packet;
@@ -356,9 +354,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         WARP_protocol *mac_remove_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_remove_packet);
 
-        uint8_t response;
-        int error;
-        if ((error = this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_REMOVE, &response, 500)) == -1
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::MAC_REMOVE, &response, 500) == -1
             || response != MAC_REMOVE_CODE)
         {
             delete mac_remove_packet;
@@ -374,6 +370,186 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
+    }
+    else if (strcmp(command_str, MAC_ASSOCIATE_CMD) == 0)
+    {
+        // associate
+        // Get changes object
+        json_t *changes = json_object_get(root, JSON_CHANGES);
+        if (!json_is_object(changes))
+        {
+            cout << "ERROR: no valid changes object found." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        // bssid - bssid of the virutal interface
+        // mac_addr - mac addr to be associated
+        json_t *bssid, *mac_addr;
+        bssid = json_object_get(changes, JSON_BSSID);
+        if (!json_is_string(bssid) )
+        {
+            cout << "ERROR: bssid is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        mac_addr = json_object_get(changes, JSON_MAC_ADDRESS);
+        if (!json_is_string(mac_addr))
+        {
+            cout << "ERROR: mac address is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        WARP_protocol::WARP_bssid_control_struct* bssid_cntrl = (WARP_protocol::WARP_bssid_control_struct*)malloc(sizeof(WARP_protocol::WARP_bssid_control_struct));
+        bssid_cntrl->total_num_element = 1;
+        bssid_cntrl->operation_code = BSSID_STATION_ASSOCIATE_CODE;
+
+        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != ErrorCode::OK)
+        {
+            json_decref(root);
+
+            cout << "ERROR: invalid bssid format." << endl;
+            this->set_error_msg("Invalid mac address in json object.");
+            return ErrorCode::ERROR;
+        }
+
+        bssid_cntrl->mac_addr = (uint8_t(*)[6])malloc(1 * sizeof(uint8_t[6]));
+
+        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != ErrorCode::OK)
+        {
+            json_decref(root);
+
+            cout << "ERROR: invalid mac address format." << endl;
+            this->set_error_msg("Invalid mac address in json object.");
+            return ErrorCode::ERROR;
+        }
+
+        // Everything successful. send packet
+        WARP_protocol *bssid_packet = WARP_protocol::create_bssid_control(bssid_cntrl);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_BSSID_CNTRL, bssid_packet);
+
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::BSSID_CNTRL, &response, 500) == -1
+            || response != BSSID_STATION_ASSOCIATE_CODE || response != BSSID_STATION_EXISTED_CODE)
+        {
+            delete bssid_packet;
+            free(bssid_cntrl->mac_addr);
+            free(bssid_cntrl);
+            json_decref(root);
+
+            cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
+            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
+            return ErrorCode::ERROR;
+        }
+
+        delete bssid_packet;
+        free(bssid_cntrl->mac_addr);
+        free(bssid_cntrl);
+
+        std::string to_associate(std::string((char*)json_string_value(bssid)) + "|" + std::string((char*)json_string_value(mac_addr)));
+
+        // Update corresponding bssid nodes
+        this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE, (void*)to_associate.c_str());
+    }
+    else if (strcmp(command_str, MAC_DISASSOCIATE_CMD) == 0)
+    {
+        // disassociate
+        // Get changes object
+        json_t *changes = json_object_get(root, JSON_CHANGES);
+        if (!json_is_object(changes))
+        {
+            cout << "ERROR: no valid changes object found." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        // bssid - bssid of the virutal interface
+        // mac_addr - mac addr to be associated
+        json_t *bssid, *mac_addr;
+        bssid = json_object_get(changes, JSON_BSSID);
+        if (!json_is_string(bssid) )
+        {
+            cout << "ERROR: bssid is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        mac_addr = json_object_get(changes, JSON_MAC_ADDRESS);
+        if (!json_is_string(mac_addr))
+        {
+            cout << "ERROR: mac address is not a valid string." <<endl;
+            this->set_error_msg("Error parsing the json object.");
+
+            json_decref(root);
+
+            return ErrorCode::ERROR;
+        }
+
+        WARP_protocol::WARP_bssid_control_struct* bssid_cntrl = (WARP_protocol::WARP_bssid_control_struct*)malloc(sizeof(WARP_protocol::WARP_bssid_control_struct));
+        bssid_cntrl->total_num_element = 1;
+        bssid_cntrl->operation_code = BSSID_STATION_DISASSOCIATE_CODE;
+
+        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != ErrorCode::OK)
+        {
+            json_decref(root);
+
+            cout << "ERROR: invalid bssid format." << endl;
+            this->set_error_msg("Invalid mac address in json object.");
+            return ErrorCode::ERROR;
+        }
+
+        bssid_cntrl->mac_addr = (uint8_t(*)[6])malloc(1 * sizeof(uint8_t[6]));
+
+        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != ErrorCode::OK)
+        {
+            json_decref(root);
+
+            cout << "ERROR: invalid mac address format." << endl;
+            this->set_error_msg("Invalid mac address in json object.");
+            return ErrorCode::ERROR;
+        }
+
+        // Everything successful. send packet
+        WARP_protocol *bssid_packet = WARP_protocol::create_bssid_control(bssid_cntrl);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_BSSID_CNTRL, bssid_packet);
+
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::BSSID_CNTRL, &response, 500) == -1
+            || response != BSSID_STATION_DISASSOCIATE_CODE || response != BSSID_STATION_NOT_EXISTED_CODE)
+        {
+            delete bssid_packet;
+            free(bssid_cntrl->mac_addr);
+            free(bssid_cntrl);
+            json_decref(root);
+
+            cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
+            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
+            return ErrorCode::ERROR;
+        }
+
+        delete bssid_packet;
+        free(bssid_cntrl->mac_addr);
+        free(bssid_cntrl);
+
+        std::string to_disassociate(std::string((char*)json_string_value(bssid)) + "|" + std::string((char*)json_string_value(mac_addr)));
+
+        // Update corresponding bssid nodes
+        this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE, (void*)to_disassociate.c_str());
     }
 
     json_decref(root);
@@ -421,6 +597,20 @@ void CommsAgent::add_to_bssid_group(BssidNode* node)
 void CommsAgent::set_warp_to_wlan_agent(BssidNode* agent)
 {
     this->warp_to_wlan_agent.reset(agent);
+}
+
+int CommsAgent::sync(int operation_code, void* command)
+{
+    BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
+    switch(op)
+    {
+        case BSSID_NODE_OPS::COMMAND_ADD:
+            this->command_queue_lock.lock();
+            this->command_queue.push(string((char*)command));
+            this->command_queue_lock.unlock();
+    }
+
+    return 0;
 }
 
 // Static variable init

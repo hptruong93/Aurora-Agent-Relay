@@ -1,8 +1,9 @@
 CC = g++
 # -pthread can be removed when c++11 is used
 COMMON_FLAGS = -g -O3 -pthread -ltins -lpcap -lzmq -ljansson -std=c++0x
-CFLAGS = $(COMMON_FLAGS) -c
-LFLAGS = $(COMMON_FLAGS) -Wall
+CFLAGS = $(COMMON_FLAGS) -c -w
+#LFLAGS = $(COMMON_FLAGS) -Wall
+LFLAGS = $(COMMON_FLAGS) -w
 
 WARP_PROTOCOL_DIR = ../warp_protocol/
 INC_WARP_PROTOCOL = -I$(WARP_PROTOCOL_DIR)
@@ -33,7 +34,7 @@ agents : util.o config.o warp_protocol.o fragment_receiver.o warp_protocol_sende
 
 ###################################Compiling main files####################################################
 dpm_agent.o: $(DPM_DIR)dpm_agent.cpp
-	$(CC) $(DPM_DIR)dpm_agent.cpp $(CFLAGS) $(INC_RELAY_AGENT) $(INC_UTILITY) -o dpm_agent.o
+	$(CC) $(DPM_DIR)dpm_agent.cpp $(CFLAGS) $(INC_RELAY_AGENT) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_UTILITY) -o dpm_agent.o
 
 comms_agent.o: comms_agent.cpp
 	$(CC) comms_agent.cpp $(CFLAGS) $(INC_WARP_PROTOCOL) $(INC_SEND_MODULE) $(INC_FILTER) $(INC_UTILITY) -o comms_agent.o
