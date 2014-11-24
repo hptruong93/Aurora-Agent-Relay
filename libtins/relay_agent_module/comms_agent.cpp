@@ -373,6 +373,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     }
     else if (strcmp(command_str, MAC_ASSOCIATE_CMD) == 0)
     {
+        cout << "Associate command detected." << endl;
         // associate
         // Get changes object
         json_t *changes = json_object_get(root, JSON_CHANGES);
@@ -436,11 +437,12 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         }
 
         // Everything successful. send packet
+        cout << "--------------------------------------------------------------Sending associate\n";
         WARP_protocol *bssid_packet = WARP_protocol::create_bssid_control(bssid_cntrl);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_BSSID_CNTRL, bssid_packet);
 
         if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::BSSID_CNTRL, &response, 500) == -1
-            || response != BSSID_STATION_ASSOCIATE_CODE || response != BSSID_STATION_EXISTED_CODE)
+            || !(response == BSSID_STATION_ASSOCIATE_CODE || response == BSSID_STATION_EXISTED_CODE))
         {
             delete bssid_packet;
             free(bssid_cntrl->mac_addr);
@@ -458,8 +460,9 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         std::string to_associate(std::string((char*)json_string_value(bssid)) + "|" + std::string((char*)json_string_value(mac_addr)));
 
+        cout << "Will update bssid group\n";
         // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE, (void*)to_associate.c_str());
+        this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_ASSOCIATE, (void*)to_associate.c_str());
     }
     else if (strcmp(command_str, MAC_DISASSOCIATE_CMD) == 0)
     {
@@ -530,7 +533,7 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_BSSID_CNTRL, bssid_packet);
 
         if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::BSSID_CNTRL, &response, 500) == -1
-            || response != BSSID_STATION_DISASSOCIATE_CODE || response != BSSID_STATION_NOT_EXISTED_CODE)
+            || !(response == BSSID_STATION_DISASSOCIATE_CODE || response == BSSID_STATION_NOT_EXISTED_CODE))
         {
             delete bssid_packet;
             free(bssid_cntrl->mac_addr);
@@ -575,6 +578,7 @@ void CommsAgent::set_msg(const std::string& message)
 
 void CommsAgent::update_bssids(int operation_code, void* bssid)
 {
+    cout << "Calling update_bssids with op: " << operation_code << endl;
     this->bssid_update_group_mux.lock();
 
     for (int i = 0; i < this->bssid_update_group.size(); i++)
@@ -608,6 +612,7 @@ int CommsAgent::sync(int operation_code, void* command)
             this->command_queue_lock.lock();
             this->command_queue.push(string((char*)command));
             this->command_queue_lock.unlock();
+            sem_post(&this->new_command);
     }
 
     return 0;

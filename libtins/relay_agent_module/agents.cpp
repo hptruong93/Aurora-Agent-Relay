@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
         vector<string> interfaces;
         interfaces.push_back("eth1");
@@ -112,6 +113,7 @@ int main(int argc, char *argv[])
 
         comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
         comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
+        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
         vector<string> interfaces;
         interfaces.push_back("eth1");
@@ -134,7 +136,7 @@ int main(int argc, char *argv[])
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
-        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 1.0);
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 4.0);
         dpm_timed_check_thread.detach();
     }
 

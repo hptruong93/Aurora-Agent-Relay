@@ -86,6 +86,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 break;
             case SUBTYPE_BSSID_CONTROL:
                 cout << "Bssid control packet response from WARP" << endl;
+                data_processed_length = WARP_protocol::process_warp_layer(warp_layer_buffer, &bssid_result);
 
         }
 
@@ -99,7 +100,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 //RawPDU payload(warp_layer_buffer, warp_layer.header_size());
                 Dot11 dot11(assembled_data, data_length);
                 auto type = dot11.type();
-                if (filter.filter(&dot11)) {
+                if (type == Dot11::MANAGEMENT) {
                     //Put in radio tap and send to output
                     RadioTap header(default_radio_tap_buffer, sizeof(default_radio_tap_buffer));
                     RadioTap to_send = header /  RawPDU(assembled_data, data_length);
@@ -133,6 +134,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                 sem_post(&this->mac_control_sync);
             } else if (packet_type == SUBTYPE_BSSID_CONTROL) {
                 this->response_packet_type = bssid_result.operation_code;
+                printf("Bssid response op code: %d\n", this->response_packet_type);
                 sem_post(&this->bssid_control_sync);
             }
 
