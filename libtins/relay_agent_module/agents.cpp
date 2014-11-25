@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
-        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 4.0);
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 2.0);
         dpm_timed_check_thread.detach();
     }
     else
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
-        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 4.0);
+        thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 2.0);
         dpm_timed_check_thread.detach();
     }
 

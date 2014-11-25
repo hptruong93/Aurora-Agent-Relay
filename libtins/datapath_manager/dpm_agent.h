@@ -41,7 +41,8 @@ class DPMAgent : public BssidNode
         unsigned int virtual_ethernet_count;
         BssidNode *comms_agent;
         // Store virtual wlan interfaces and pid
-        std::map<std::string, int> vwlan_pids;
+        // std::map<std::string, int> vwlan_pids;
+        // std::map<std::string, int> veth_pids;
 
         // Store added interface names and associated station mac addresses. Format: (interface_name, vector(mac_addr))
         std::map<std::string, std::set<std::string>> interface_mac;

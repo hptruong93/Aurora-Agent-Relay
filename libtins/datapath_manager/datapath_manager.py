@@ -62,7 +62,7 @@ def add(args):
         _add_interface(args[0], args[1], args[2])
         virtual_interface_index = ovs_controller.get_port(args[2]) + 1
     else:
-        print "Port already exists. Cannot add it again..."
+        print "Port %s already exists. Cannot add it again..." % args[2]
         return
 
     #Turn off flooding
@@ -226,3 +226,4 @@ if __name__ == "__main__":
         print_help(sys.argv)
         print "Encountered exception..."
         traceback.print_exc(file=sys.stdout)
+        sys.exit(-1)

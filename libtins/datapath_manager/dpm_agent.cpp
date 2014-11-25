@@ -14,6 +14,16 @@ std::string create_virtual_interface(std::string interface) {
     return std::string("v" + std::string(interface) + "-dpm");
 }
 
+std::string create_virtual_ethernet(std::string wlan_interface, std::string ethernet_interface) {
+    //Do not create virtual ethernet since not needed.
+    //Creating virtual ethernet interface is architecturely more consistent, but not functionally necessary.
+    // return std::string("v" + std::string(ethernet_interface) + "-" + std::string(wlan_interface));
+    return std::string(ethernet_interface + "");
+}
+
+
+/***********************************Constructor***********************************************
+*********************************************************************************************/
 DPMAgent::DPMAgent()
 {
     this->virtual_ethernet_count = 0;
@@ -56,60 +66,52 @@ void DPMAgent::initialize(std::string ovs_name)
 
 int DPMAgent::add(const std::string& wlan_interface, const std::string& ethernet_interface)
 {
-    std::string virtual_interface = create_virtual_interface(wlan_interface);//std::string("v" + std::string(wlan_interface) + "-dpm");
-    std::string virtual_ethernet = create_virtual_interface(ethernet_interface);//std::string("v" + std::string(ethernet_interface) + "-dpm");
-    
-    if (this->virtual_ethernet_count == 0) {
-        this->virtual_ethernet_count++;
-    }
+    std::string virtual_interface = create_virtual_interface(wlan_interface);
+    std::string virtual_ethernet = create_virtual_ethernet(wlan_interface, ethernet_interface);
     
     std::cout << "Creating virtual interfaces... " << virtual_interface << " and " << virtual_ethernet << std::endl;
-    system(("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface)).c_str());
+    std::string vwlan_command("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface));
+    system(vwlan_command.c_str());
     system(("ifconfig " + virtual_interface + " up").c_str());
 
-    //Getting vethd pid for the created interface
-    std::string a("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface));
-    std::vector<int> v;
-    get_pid(a, &v, 1);
-    printf("Found pid %d\n", *(v.begin()));
-    vwlan_pids.insert(std::pair<std::string, int>(std::string(wlan_interface), *(v.begin())));
-
-    if (this->virtual_ethernet_count == 1) {
-        system(("vethd -v " + virtual_ethernet + " -e " + ethernet_interface).c_str());
-        system(("ifconfig " + virtual_ethernet + " up").c_str());
-    }
-
+    //Finished creating virtual interfaces. Now call the ovs on those created interfaces.
     std::cout<<"Command: " << "add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet <<std::endl;
     return execute_command("add " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet);
 }
 
 int DPMAgent::remove(const std::string& wlan_interface, const std::string& ethernet_interface)
 {
-    //Get pid
-    auto search = vwlan_pids.find(wlan_interface);
-    if(search != vwlan_pids.end()) {
-        std::cout << "Found ----------------------------------- " << search->first << " " << search->second << '\n';
+    std::string virtual_interface = create_virtual_interface(wlan_interface);
+    std::string virtual_ethernet = create_virtual_ethernet(wlan_interface, ethernet_interface);
+
+    std::string vwlan_command("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface));
+
+    int error = execute_command("remove " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet);
+    if (error != 0) {
+        return error;
     }
 
-    cout << "--------------------" << ("kill -SIGTERM " + std::to_string(search->second)) << endl;
-    system(("kill -SIGTERM " + std::to_string(search->second)).c_str());
-    vwlan_pids.erase(wlan_interface);
+    //Get pid wlan
+    std::vector<int> vwlan;
+    get_pid(vwlan_command, &vwlan, 1);
+    int vwlan_pid = *(vwlan.begin());
+    printf("Found pid %d\n", vwlan_pid);
 
-    std::string virtual_interface = std::string("v" + std::string(wlan_interface) + "-dpm");
-    return execute_command("remove " + socket_path + " " + ovs_name + " " + virtual_interface + " " + ethernet_interface);   
+    cout << "--------------------" << ("kill -SIGTERM " + std::to_string(vwlan_pid)) << endl;
+    return system(("kill -SIGTERM " + std::to_string(vwlan_pid)).c_str());
 }
 
 int DPMAgent::associate(const std::string& bssid, const std::string& wlan_interface, const std::string& ethernet_interface)
 {
     std::string virtual_interface = create_virtual_interface(wlan_interface);
-    std::string virtual_ethernet = create_virtual_interface(ethernet_interface);
+    std::string virtual_ethernet = create_virtual_ethernet(wlan_interface, ethernet_interface);
     return execute_command("associate " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet + " " + bssid);
 }
 
 int DPMAgent::disassociate(const std::string& bssid, const std::string& wlan_interface, const std::string& ethernet_interface)
 {
     std::string virtual_interface = create_virtual_interface(wlan_interface);
-    std::string virtual_ethernet = create_virtual_interface(ethernet_interface);
+    std::string virtual_ethernet = create_virtual_ethernet(wlan_interface, ethernet_interface);
     return execute_command("disassociate " + socket_path + " " + ovs_name + " " + virtual_interface + " " + virtual_ethernet + " " + bssid);
 }
 
@@ -152,6 +154,7 @@ void DPMAgent::timed_check(float seconds)
                 // Format: {"command": _cmd, "changes": {"bssid": _bssid, "macaddr": _mac_addr}}
                 // std::cout << "to associate: " << to_associate[i] << std::endl;
 
+                //Why don't we use sprintf instead of this?
                 std::string json_associate(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + QUOTE + MAC_ASSOCIATE_CMD + QUOTE + COMMA
                                                 + QUOTE + JSON_CHANGES + QUOTE + COLON + LEFT_BRACKET
                                                 + QUOTE + JSON_BSSID + QUOTE + COLON + QUOTE + interface_bssid.at(virtual_interface) + QUOTE + COMMA
@@ -159,7 +162,7 @@ void DPMAgent::timed_check(float seconds)
                                                 + RIGHT_BRACKET
                                                 + RIGHT_BRACKET);
 
-                std::cout << "Umm : " << json_associate << std::endl;
+                std::cout << "DPM agent associating: " << json_associate << std::endl;
 
                 this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }
@@ -178,7 +181,7 @@ void DPMAgent::timed_check(float seconds)
                                                 + RIGHT_BRACKET
                                                 + RIGHT_BRACKET);
 
-                std::cout << "Umm : " << json_associate << std::endl;
+                std::cout << "DPM agent disassociating: " << json_associate << std::endl;
 
                 this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_associate.c_str());
             }
