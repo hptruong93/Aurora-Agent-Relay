@@ -342,6 +342,35 @@ uint8_t CommsAgent::parse_json(const char *json_string)
             return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
+        WARP_protocol::WARP_bssid_control_struct bssid_cntrl_struct;
+        bssid_cntrl_struct.operation_code = BSSID_STATION_CLEAR_CODE;
+        bssid_cntrl_struct.total_num_element = 0;
+        if (parse_mac(json_string_value(bssid), bssid_cntrl_struct.bssid) != RETURN_CODE_OK)
+        {
+            json_decref(root);
+
+            cout << "ERROR: invalid bssid format." << endl;
+            this->set_error_msg(current_command, "Invalid mac address in json object.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
+        }
+
+        WARP_protocol *bssid_clear_packet = WARP_protocol::create_bssid_control(&bssid_cntrl_struct);
+        this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_BSSID_CNTRL, bssid_clear_packet);
+
+        if (this->warp_to_wlan_agent.get()->timed_sync((int)BSSID_NODE_OPS::BSSID_CNTRL, &response, 500) == -1
+            || response != BSSID_STATION_CLEAR_CODE)
+        {
+            delete bssid_clear_packet;
+            json_decref(root);
+
+            cout<< "ERROR: WARP failed to clear station associations, or the request timed out." << endl;
+            this->set_error_msg(current_command, "WARP failed to clear station associations, or the request timed out.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
+        }
+
+        // Clear successful
+        delete bssid_clear_packet;
+
         // Construct mac address control packet to remove mac address
         WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
         mac_address_cntrl_struct.operation_code = MAC_REMOVE_CODE;

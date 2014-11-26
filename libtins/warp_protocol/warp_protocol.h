@@ -79,6 +79,7 @@
 #define BSSID_STATION_DISASSOCIATE_CODE               32
 #define BSSID_STATION_EXISTED_CODE                    65
 #define BSSID_STATION_NOT_EXISTED_CODE                66
+#define BSSID_STATION_CLEAR_CODE                      33
 
 #define BSSID_NUM_ELEMENT_INDEX                       2
 #define BSSID_BSSID_INDEX                             3
