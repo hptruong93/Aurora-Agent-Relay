@@ -54,6 +54,10 @@ ParseFunctionCode parse_input(string input, vector<string>& tokens)
     }
 }
 
+// Input parameters:
+// argv[1]: zmq send port
+// argv[2]: zmq receive port
+// argv[3]: zmq peer ip address
 int main(int argc, char *argv[])
 {
     #ifdef TEST_JSON_DECODER
@@ -65,7 +69,7 @@ int main(int argc, char *argv[])
 
     #else
 
-    unique_ptr<CommsAgent> comms_agent;
+    CommsAgent* comms_agent;
     WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
     MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
     DPMAgent *dpm = new DPMAgent();
@@ -74,68 +78,74 @@ int main(int argc, char *argv[])
     if (argc < 4)
     {
         // Comms Agent
-        comms_agent = unique_ptr<CommsAgent>(new CommsAgent());
-        dpm->set_agent((BssidNode*)comms_agent.get());
+        comms_agent = new CommsAgent();
 
-        comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
-        comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
-        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
-
+        // Start process loop for warp to wlan
         vector<string> interfaces;
         interfaces.push_back("eth1");
         interfaces.push_back("eth1");
         thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, interfaces);
         warp_to_wlan_sniff_thread.detach();
 
+        // Start process loop for mon to warp
         interfaces.clear();
         interfaces.push_back("hwsim0");
         interfaces.push_back("eth1");
         thread mon_to_warp_sniff_thread(&MonToWarpAgent::run, mon_to_warp, interfaces);
         mon_to_warp_sniff_thread.detach();
 
-        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
-        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
-        thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
-        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent.get());
+        // Start comms agent loops
+        comms_agent->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
+        comms_agent->add_to_bssid_group((BssidNode*)mon_to_warp);
+        comms_agent->add_to_bssid_group((BssidNode*)dpm);
+
+        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent);
+        thread comms_send_thread(&CommsAgent::send_loop, comms_agent);
+        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent);
         comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
+        // Start dpm agent
+        dpm->set_agent((BssidNode*)comms_agent);
         thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 2.0);
         dpm_timed_check_thread.detach();
     }
     else
     {
         // Comms Agent
-        comms_agent = unique_ptr<CommsAgent>(new CommsAgent(argv[1], argv[2], argv[3]));
-        dpm->set_agent((BssidNode*)comms_agent.get());
+        comms_agent = new CommsAgent(argv[1], argv[2], argv[3]);
 
-        comms_agent.get()->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
-        comms_agent.get()->add_to_bssid_group((BssidNode*)mon_to_warp);
-        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
-
+        // Start process loop for warp to wlan
         vector<string> interfaces;
         interfaces.push_back("eth1");
         interfaces.push_back("eth1");
         thread warp_to_wlan_sniff_thread(&WarpToWlanAgent::run, warp_to_wlan, interfaces);
         warp_to_wlan_sniff_thread.detach();
 
+        // Start process loop for mon to warp
         interfaces.clear();
         interfaces.push_back("hwsim0");
         interfaces.push_back("eth1");
         thread mon_to_warp_sniff_thread(&MonToWarpAgent::run, mon_to_warp, interfaces);
         mon_to_warp_sniff_thread.detach();
 
-        comms_agent.get()->add_to_bssid_group((BssidNode*)dpm);
 
-        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent.get());
-        thread comms_send_thread(&CommsAgent::send_loop, comms_agent.get());
-        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent.get());
+        // Start comms agent loops
+        comms_agent->set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
+        comms_agent->add_to_bssid_group((BssidNode*)mon_to_warp);
+        comms_agent->add_to_bssid_group((BssidNode*)dpm);
+
+        thread comms_receive_thread(&CommsAgent::recv_loop, comms_agent);
+        thread comms_send_thread(&CommsAgent::send_loop, comms_agent);
+        thread comms_parse_thread(&CommsAgent::parse_loop, comms_agent);
         comms_parse_thread.detach();
         comms_receive_thread.detach();
         comms_send_thread.detach();
 
+        // Start dpm agent
+        dpm->set_agent((BssidNode*)comms_agent);
         thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 2.0);
         dpm_timed_check_thread.detach();
     }
