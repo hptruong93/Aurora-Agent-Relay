@@ -6,22 +6,23 @@
 #include "warp_to_wlan_agent.h"
 #include "relay_agent.h"
 #include "comms_agent.h"
+#include "util.h"
 // Testing
 #include "test.h"
 
 using namespace RelayAgents;
 using namespace std;
 
-ErrorCode parse_mac(const char* origin, uint8_t dest[])
+uint8_t parse_mac(const char* origin, uint8_t dest[])
 {
     if (sscanf(origin, "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", &dest[0], &dest[1], &dest[2], &dest[3], &dest[4], &dest[5]) != 6)
     {
         cout<<"ERROR: Failed to parse mac address string into uint arrays"<<endl;
 
-        return ErrorCode::ERROR;
+        return RETURN_CODE_ERROR;
     }
 
-    return ErrorCode::OK;
+    return RETURN_CODE_OK;
 }
 
 uint8_t parse_hwmode(std::string& hwmode)
@@ -63,7 +64,7 @@ void CommsAgent::send_loop()
         zmq::message_t send_message(DEFAULT_MSG_SIZE);
 
         sem_wait(&this->signal);
-        cout << "Trying to send something\n" << endl;
+        cout << "Send Loop: Sending response...\n" << endl;
         this->message_lock.lock();
 
         snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, this->send_message.get()->c_str());
@@ -117,8 +118,11 @@ void CommsAgent::parse_loop()
             // cout<<"SIZE WHEN PEEK: "<<this->command_queue.size()<<endl;
             this->command_queue_lock.unlock();
 
-            this->parse_json(next_command.c_str());
-            sem_post(&this->signal);
+            uint8_t code = this->parse_json(next_command.c_str());
+            if (code & RETURN_CODE_SEND_RESPONSE == RETURN_CODE_SEND_RESPONSE)
+            {
+                sem_post(&this->signal);
+            }
 
             this->command_queue_lock.lock();
             this->command_queue.pop();
@@ -129,8 +133,9 @@ void CommsAgent::parse_loop()
     }
 }
 
-ErrorCode CommsAgent::parse_json(const char *json_string)
+uint8_t CommsAgent::parse_json(const char *json_string)
 {
+    uint8_t if_send_response = RETURN_CODE_NO_RESPONSE;
     json_t *root;
     json_error_t error;
 
@@ -141,27 +146,22 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (strcmp(json_string, "test") == 0)
         {
             // Test string
-            this->set_msg("{ success: True }");
-            return ErrorCode::OK;
+            this->set_msg("{ \"changes\": { \"success\": True, \"message\": \"Test.\"} }");
+            return RETURN_CODE_OK | RETURN_CODE_SEND_RESPONSE;
         }
 
         cout<<"ERROR: on line "<<error.line<<": "<<error.text<<endl;
 
-        this->set_error_msg("Error parsing the json object.");
-        return ErrorCode::ERROR;
+        return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
     }
-
-    // Set response message
-    this->set_msg(string(json_string));
 
     // Test if root is a valid json object
     if (!json_is_object(root))
     {
         cout << "ERROR: root is not a json object." <<endl;
-        this->set_error_msg("Error parsing the json object.");
         json_decref(root);
 
-        return ErrorCode::ERROR;
+        return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
     }
 
     // Get command type
@@ -169,11 +169,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     if (!json_is_string(command))
     {
         cout << "ERROR: command is not a string." <<endl;
-        this->set_error_msg("Error parsing the json object.");
 
         json_decref(root);
 
-        return ErrorCode::ERROR;
+        return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
     }
 
     // Used for response messages
@@ -181,20 +180,22 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
     // Parse command
     const char *command_str = json_string_value(command);
+    std::string current_command(command_str);
 
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
     {
+        if_send_response = RETURN_CODE_SEND_RESPONSE;
         // Get changes object
         json_t *changes = json_object_get(root, JSON_CHANGES);
         if (!json_is_object(changes))
         {
             cout << "ERROR: no valid changes object found." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            this->set_error_msg(current_command, "\"changes\" is not a valid json object");
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Parse the changes
@@ -203,23 +204,23 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_string(bssid) )
         {
             cout << "ERROR: bssid is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            this->set_error_msg(current_command, "macaddr is not a valid string");
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Bssid parsing and send mac address control protocol
         WARP_protocol::WARP_mac_control_struct mac_address_cntrl_struct;
         mac_address_cntrl_struct.operation_code = MAC_ADD_CODE;
-        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
+        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != RETURN_CODE_OK)
         {
             json_decref(root);
 
             cout << "ERROR: invalid bssid format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            this->set_error_msg(current_command, "Invalid mac address in json object.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Parsing done. We can send the mac address control now
@@ -235,8 +236,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             json_decref(root);
 
             cout << "ERROR: WARP failed to add mac address, or the request timed out." << endl;
-            this->set_error_msg("WARP failed to add mac address, or the request timed out.");
-            return ErrorCode::ERROR;
+            this->set_error_msg(current_command, "WARP failed to add mac address, or the request timed out.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Mac address successfully added by WARP
@@ -252,11 +253,12 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid channel format." << endl;
+            this->set_error_msg(current_command, "Invalid channel format.");
 
             free(transmission_control);
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
         transmission_control->channel = (uint8_t)json_integer_value(parameters);
 
@@ -264,11 +266,12 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_string(parameters))
         {
             cout << "ERROR: invalid hw_mode format." << endl;
+            this->set_error_msg(current_command, "Invalid hw_mode format");
 
             free(transmission_control);
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
         string hwmode_str(json_string_value(parameters));
         transmission_control->hw_mode = parse_hwmode(hwmode_str);
@@ -277,11 +280,12 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid tx_power format." << endl;
+            this->set_error_msg(current_command, "Invalid tx_power format.");
 
             free(transmission_control);
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
         transmission_control->tx_power = (uint8_t)json_integer_value(parameters);
 
@@ -289,11 +293,12 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_integer(parameters))
         {
             cout << "ERROR: invalid disabled format." << endl;
+            this->set_error_msg(current_command, "Invalid disabled format.");
 
             free(transmission_control);
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
         transmission_control->disabled = (uint8_t)json_integer_value(parameters);
 
@@ -309,8 +314,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             json_decref(root);
 
             cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
-            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
-            return ErrorCode::ERROR;
+            this->set_error_msg(current_command, "WARP failed to set up the configuration requested, or the request timed out.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Configuration successful!!
@@ -323,17 +328,18 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
     else if (strcmp(command_str, UCI_DELETE_SECTION) == 0 ||
                 strcmp(command_str, UCI_DELETE_BSS) == 0)
     {
+        if_send_response = RETURN_CODE_SEND_RESPONSE;
         // Get Bssid
         json_t *bssid;
         bssid = json_object_get(root, JSON_MAC_ADDRESS);
         if (!json_is_string(bssid))
         {
             cout << "ERROR: bssid is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            this->set_error_msg(current_command, "macaddr is not a string.");
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Construct mac address control packet to remove mac address
@@ -341,13 +347,13 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         mac_address_cntrl_struct.operation_code = MAC_REMOVE_CODE;
 
         // Parse Bssid
-        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != ErrorCode::OK)
+        if (parse_mac(json_string_value(bssid), mac_address_cntrl_struct.mac_address) != RETURN_CODE_OK)
         {
             json_decref(root);
 
             cout << "ERROR: invalid bssid format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            this->set_error_msg(current_command, "Invalid mac address in json object.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Parsing done. Time to send...
@@ -361,8 +367,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             json_decref(root);
 
             cout<< "ERROR: WARP failed to remove mac address, or the request timed out." << endl;
-            this->set_error_msg("WARP failed to remove mac address, or the request timed out.");
-            return ErrorCode::ERROR;
+            this->set_error_msg(current_command, "WARP failed to remove mac address, or the request timed out.");
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
         // Configuration succesful!
@@ -379,12 +385,11 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         json_t *changes = json_object_get(root, JSON_CHANGES);
         if (!json_is_object(changes))
         {
-            cout << "ERROR: no valid changes object found." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            cout << "ERROR: no valid changes object found for mac associate." <<endl;
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         // bssid - bssid of the virutal interface
@@ -393,47 +398,43 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         bssid = json_object_get(changes, JSON_BSSID);
         if (!json_is_string(bssid) )
         {
-            cout << "ERROR: bssid is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            cout << "ERROR: bssid is not a valid string for mac associate." <<endl;
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         mac_addr = json_object_get(changes, JSON_MAC_ADDRESS);
         if (!json_is_string(mac_addr))
         {
-            cout << "ERROR: mac address is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            cout << "ERROR: mac address is not a valid string for mac associate." <<endl;
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         WARP_protocol::WARP_bssid_control_struct* bssid_cntrl = (WARP_protocol::WARP_bssid_control_struct*)malloc(sizeof(WARP_protocol::WARP_bssid_control_struct));
         bssid_cntrl->total_num_element = 1;
         bssid_cntrl->operation_code = BSSID_STATION_ASSOCIATE_CODE;
 
-        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != ErrorCode::OK)
+        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != RETURN_CODE_OK)
         {
             json_decref(root);
 
-            cout << "ERROR: invalid bssid format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: invalid bssid format for mac associate." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         bssid_cntrl->mac_addr = (uint8_t(*)[6])malloc(1 * sizeof(uint8_t[6]));
 
-        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != ErrorCode::OK)
+        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != RETURN_CODE_OK)
         {
             json_decref(root);
 
-            cout << "ERROR: invalid mac address format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: invalid mac address format for mac associate." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         // Everything successful. send packet
@@ -449,9 +450,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             free(bssid_cntrl);
             json_decref(root);
 
-            cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
-            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: WARP failed to associate mac address, or the request timed out." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         delete bssid_packet;
@@ -460,7 +460,6 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
         std::string to_associate(std::string((char*)json_string_value(bssid)) + "|" + std::string((char*)json_string_value(mac_addr)));
 
-        cout << "Will update bssid group\n";
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_ASSOCIATE, (void*)to_associate.c_str());
     }
@@ -472,11 +471,10 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         if (!json_is_object(changes))
         {
             cout << "ERROR: no valid changes object found." <<endl;
-            this->set_error_msg("Error parsing the json object.");
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         // bssid - bssid of the virutal interface
@@ -485,47 +483,43 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
         bssid = json_object_get(changes, JSON_BSSID);
         if (!json_is_string(bssid) )
         {
-            cout << "ERROR: bssid is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            cout << "ERROR: bssid is not a valid string for mac disassociate." <<endl;
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         mac_addr = json_object_get(changes, JSON_MAC_ADDRESS);
         if (!json_is_string(mac_addr))
         {
-            cout << "ERROR: mac address is not a valid string." <<endl;
-            this->set_error_msg("Error parsing the json object.");
+            cout << "ERROR: mac address is not a valid string for mac disassociate." <<endl;
 
             json_decref(root);
 
-            return ErrorCode::ERROR;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         WARP_protocol::WARP_bssid_control_struct* bssid_cntrl = (WARP_protocol::WARP_bssid_control_struct*)malloc(sizeof(WARP_protocol::WARP_bssid_control_struct));
         bssid_cntrl->total_num_element = 1;
         bssid_cntrl->operation_code = BSSID_STATION_DISASSOCIATE_CODE;
 
-        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != ErrorCode::OK)
+        if (parse_mac(json_string_value(bssid), bssid_cntrl->bssid) != RETURN_CODE_OK)
         {
             json_decref(root);
 
-            cout << "ERROR: invalid bssid format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: invalid bssid format for mac disassociate." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         bssid_cntrl->mac_addr = (uint8_t(*)[6])malloc(1 * sizeof(uint8_t[6]));
 
-        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != ErrorCode::OK)
+        if (parse_mac(json_string_value(mac_addr), bssid_cntrl->mac_addr[0]) != RETURN_CODE_OK)
         {
             json_decref(root);
 
-            cout << "ERROR: invalid mac address format." << endl;
-            this->set_error_msg("Invalid mac address in json object.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: invalid mac address format for mac disassociate." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         // Everything successful. send packet
@@ -540,9 +534,8 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
             free(bssid_cntrl);
             json_decref(root);
 
-            cout << "ERROR: WARP failed to set up the configuration requested, or the request timed out." << endl;
-            this->set_error_msg("WARP failed to set up the configuration requested, or the request timed out.");
-            return ErrorCode::ERROR;
+            cout << "ERROR: WARP failed to disassociate the mac address, or the request timed out." << endl;
+            return RETURN_CODE_ERROR | RETURN_CODE_NO_RESPONSE;
         }
 
         delete bssid_packet;
@@ -559,13 +552,34 @@ ErrorCode CommsAgent::parse_json(const char *json_string)
 
     cout << "Parsing: Everything ok." << endl;
 
-    return ErrorCode::OK;
+    // Determine whether to generate success reply or not
+    if (if_send_response == RETURN_CODE_SEND_RESPONSE)
+    {
+        this->set_success_msg(current_command);
+    }
+
+    return RETURN_CODE_OK | if_send_response;
 }
 
-void CommsAgent::set_error_msg(const std::string& message)
+void CommsAgent::set_error_msg(const std::string& command, const std::string& message)
 {
     this->message_lock.lock();
-    this->send_message.reset(new string("{ successful: False,  message: \"" + message + "\"}"));
+    this->send_message.reset(new string(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + command
+                                        + COMMA + QUOTE + "changes" + QUOTE + COLON + LEFT_BRACKET
+                                        + QUOTE + "success" + QUOTE + COLON + "False"
+                                        + COMMA + QUOTE + "info" + QUOTE + COLON + QUOTE + message + QUOTE
+                                        + RIGHT_BRACKET + RIGHT_BRACKET));
+    this->message_lock.unlock();
+}
+
+void CommsAgent::set_success_msg(const std::string& command, const std::string& message)
+{
+    this->message_lock.lock();
+    this->send_message.reset(new string(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + command
+                                        + COMMA + QUOTE + "changes" + QUOTE + COLON + LEFT_BRACKET
+                                        + QUOTE + "success" + QUOTE + COLON + "True"
+                                        + COMMA + QUOTE + "info" + QUOTE + COLON + QUOTE + message + QUOTE
+                                        + RIGHT_BRACKET + RIGHT_BRACKET));
     this->message_lock.unlock();
 }
 

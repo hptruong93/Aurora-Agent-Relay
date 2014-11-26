@@ -47,12 +47,13 @@
 
 #define AGENT_TYPE                      "agent_type"
 
-namespace RelayAgents {
+// Return codes
+#define RETURN_CODE_OK                  0x00
+#define RETURN_CODE_ERROR               0x01
+#define RETURN_CODE_SEND_RESPONSE       0x02
+#define RETURN_CODE_NO_RESPONSE         0x04
 
-    enum class ErrorCode {
-        OK = 0,
-        ERROR = 1
-    };
+namespace RelayAgents {
 
     // Utility class
     class CommsAgent : public BssidNode {
@@ -65,13 +66,14 @@ namespace RelayAgents {
         bool mac_add_success;
         public:
             CommsAgent(const char *init_send_port = "6001", const char *init_recv_port = "6000", const char *init_peer_ip_addr = "localhost");
-            ErrorCode parse_json(const char *json_string);
+            uint8_t parse_json(const char *json_string);
             // ZMQ communications
             void send_loop();
             void recv_loop();
             // Json parsing loop
             void parse_loop();
-            void set_error_msg(const std::string& message = std::string(""));
+            void set_error_msg(const std::string& command, const std::string& message = std::string(""));
+            void set_success_msg(const std::string& command, const std::string& message = std::string(""));
             void set_msg(const std::string& message = std::string(""));
             // Bssid update
             void update_bssids(int operation_code, void* bssid);
@@ -108,6 +110,5 @@ namespace RelayAgents {
 }
 
 // Function declarations
-
-RelayAgents::ErrorCode parse_mac(const char *origin, uint8_t dest[]);
+uint8_t parse_mac(const char *origin, uint8_t dest[]);
 #endif

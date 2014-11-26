@@ -13,12 +13,6 @@
 #define BASE_COMMAND_STR            "python -u ../datapath_manager/datapath_manager.py"
 #define DEFAULT_OVS_NAME			"tb"
 #define ALL_STATION_COMMAND         "hostapd_cli all_sta -i "
-// Json builders
-#define LEFT_BRACKET                std::string("{")
-#define RIGHT_BRACKET               std::string("}")
-#define QUOTE                       std::string("\"")
-#define COLON                       std::string(":")
-#define COMMA                       std::string(",")
 
 class DPMAgent : public BssidNode
 {
