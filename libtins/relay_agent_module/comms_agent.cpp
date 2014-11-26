@@ -567,7 +567,7 @@ void CommsAgent::set_error_msg(const std::string& command, const std::string& me
     this->send_message.reset(new string(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + command
                                         + COMMA + QUOTE + "changes" + QUOTE + COLON + LEFT_BRACKET
                                         + QUOTE + "success" + QUOTE + COLON + "False"
-                                        + COMMA + QUOTE + "info" + QUOTE + COLON + QUOTE + message + QUOTE
+                                        + COMMA + QUOTE + "error" + QUOTE + COLON + QUOTE + message + QUOTE
                                         + RIGHT_BRACKET + RIGHT_BRACKET));
     this->message_lock.unlock();
 }
