@@ -71,6 +71,7 @@ int DPMAgent::add(const std::string& wlan_interface, const std::string& ethernet
     
     std::cout << "Creating virtual interfaces... " << virtual_interface << " and " << virtual_ethernet << std::endl;
     std::string vwlan_command("vethd -v " + virtual_interface + " -e " + std::string(wlan_interface));
+    std::cout << " $" << vwlan_command << endl;
     system(vwlan_command.c_str());
     system(("ifconfig " + virtual_interface + " up").c_str());
 
@@ -95,10 +96,12 @@ int DPMAgent::remove(const std::string& wlan_interface, const std::string& ether
     std::vector<int> vwlan;
     get_pid(vwlan_command, &vwlan, 1);
     int vwlan_pid = *(vwlan.begin());
-    printf("Found pid %d\n", vwlan_pid);
+    // printf("Found pid %d\n", vwlan_pid);
 
-    cout << "--------------------" << ("kill -SIGTERM " + std::to_string(vwlan_pid)) << endl;
-    return system(("kill -SIGTERM " + std::to_string(vwlan_pid)).c_str());
+    //Bring interface down
+    system(("ifconfig " + virtual_interface + " down").c_str());
+    cout << " $" << ("kill " + std::to_string(vwlan_pid)) << endl;
+    return system(("kill " + std::to_string(vwlan_pid)).c_str());
 }
 
 int DPMAgent::associate(const std::string& bssid, const std::string& wlan_interface, const std::string& ethernet_interface)

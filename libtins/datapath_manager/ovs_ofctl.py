@@ -91,13 +91,18 @@ class OpenVSwitchController:
         port_list = self._exec_command_with_output(["show", self.ovs_bridge])
         print port_list
         filtered_list = re.findall('[0-9][0-9]*\(.*\):', port_list)
-        return [(item.split('(')[1])[:-2] for item in filtered_list]
+
+        dictionary = {}
+        for interface in filtered_list:
+            dictionary[(interface.split('(')[1])[:-2]] = interface.split('(')[0]
+
+        return dictionary
 
     def get_port(self, interface_name):
         """Return the index of the port in the get_ports list, -1 if interface is not bounded to ovs"""
         try:
-            return self.get_ports().index(interface_name)
-        except ValueError:
+            return int(self.get_ports()[interface_name]) - 1
+        except KeyError:
             return -1
 
     def mod_port(self, port, action):

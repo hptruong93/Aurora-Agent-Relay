@@ -39,6 +39,8 @@
 #define JSON_TX_POWER                   "txpower"
 #define JSON_DISABLED                   "disabled"
 #define JSON_BSSID                      "bssid"
+#define JSON_RADIO                      "radio"
+#define RESPONSE_HEADER                 "111 "
 
 // Command for factory
 #define WLAN_TO_WARP                    "wlan_to_warp"
@@ -73,7 +75,7 @@ namespace RelayAgents {
             // Json parsing loop
             void parse_loop();
             void set_error_msg(const std::string& command, const std::string& message = std::string(""));
-            void set_success_msg(const std::string& command, const std::string& message = std::string(""));
+            void set_success_msg(const std::string& command, const std::string& radio, const std::string& message = std::string(""));
             void set_msg(const std::string& message = std::string(""));
             // Bssid update
             void update_bssids(int operation_code, void* bssid);

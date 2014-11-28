@@ -55,19 +55,20 @@ void CommsAgent::send_loop()
     zmq::context_t ctx(1);
     zmq::socket_t pub_socket = zmq::socket_t(ctx, ZMQ_PUB);
 
-
+    std::cout << "Setting up send loop" << string("tcp://*:") + *this->send_port.get() << std::endl;
     string pub_address = string("tcp://*:") + *this->send_port.get();
     pub_socket.bind(pub_address.c_str());
 
     while (true)
     {
-        zmq::message_t send_message(DEFAULT_MSG_SIZE);
-
         sem_wait(&this->signal);
-        cout << "Send Loop: Sending response...\n" << endl;
+        cout << "Send Loop: Sending response... " << this->send_message.get()->c_str() << endl;
         this->message_lock.lock();
 
-        snprintf((char*)send_message.data(), DEFAULT_MSG_SIZE, this->send_message.get()->c_str());
+        std::string to_send = *this->send_message.get();
+        zmq::message_t send_message(to_send.length() + 1);
+
+        snprintf((char*)send_message.data(), to_send.length() + 1, to_send.c_str());
         pub_socket.send(send_message);
 
         this->message_lock.unlock();
@@ -119,8 +120,11 @@ void CommsAgent::parse_loop()
             this->command_queue_lock.unlock();
 
             uint8_t code = this->parse_json(next_command.c_str());
-            if (code & RETURN_CODE_SEND_RESPONSE == RETURN_CODE_SEND_RESPONSE)
+            printf("Should we response ? %d\n", code);
+
+            if (code & RETURN_CODE_SEND_RESPONSE)
             {
+                printf("Yea response ...\n");
                 sem_post(&this->signal);
             }
 
@@ -139,6 +143,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
     json_t *root;
     json_error_t error;
 
+    std::cout << "Parsing " << json_string << endl;
     root = json_loads(json_string, 0, &error);
 
     if (!root)
@@ -181,6 +186,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
     // Parse command
     const char *command_str = json_string_value(command);
     std::string current_command(command_str);
+    std::string current_radio;
 
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
@@ -197,6 +203,20 @@ uint8_t CommsAgent::parse_json(const char *json_string)
 
             return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
+
+        json_t *radio;
+        radio = json_object_get(root, JSON_RADIO);
+        if (!json_is_string(radio) )
+        {
+            cout << "ERROR: radio is not a valid string." <<endl;
+            this->set_error_msg(current_command, "radio is not a valid string");
+
+            json_decref(root);
+
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
+        }
+
+        current_radio = string(json_string_value(radio));
 
         // Parse the changes
         json_t *parameters, *bssid;
@@ -223,6 +243,8 @@ uint8_t CommsAgent::parse_json(const char *json_string)
             return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
+        cout << "before sending to WARP" << endl;
+
         // Parsing done. We can send the mac address control now
         WARP_protocol *mac_add_packet = WARP_protocol::create_mac_control(&mac_address_cntrl_struct);
         this->warp_to_wlan_agent.get()->sync(BSSID_NODE_OPS::SEND_MAC_ADDR_CNTRL, mac_add_packet);
@@ -237,6 +259,8 @@ uint8_t CommsAgent::parse_json(const char *json_string)
 
             cout << "ERROR: WARP failed to add mac address, or the request timed out." << endl;
             this->set_error_msg(current_command, "WARP failed to add mac address, or the request timed out.");
+
+            cout << "after sending to WARP" << endl;
             return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
 
@@ -288,7 +312,6 @@ uint8_t CommsAgent::parse_json(const char *json_string)
             return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
         }
         transmission_control->tx_power = (uint8_t)json_integer_value(parameters);
-
         parameters = json_object_get(changes, JSON_DISABLED);
         if (!json_is_integer(parameters))
         {
@@ -329,9 +352,25 @@ uint8_t CommsAgent::parse_json(const char *json_string)
                 strcmp(command_str, UCI_DELETE_BSS) == 0)
     {
         if_send_response = RETURN_CODE_SEND_RESPONSE;
-        // Get Bssid
+        json_t *changes = json_object_get(root, JSON_CHANGES);
+
+        json_t *radio;
+        radio = json_object_get(root, JSON_RADIO);
+        if (!json_is_string(radio) )
+        {
+            cout << "ERROR: radio is not a valid string." <<endl;
+            this->set_error_msg(current_command, "radio is not a valid string");
+
+            json_decref(root);
+
+            return RETURN_CODE_ERROR | RETURN_CODE_SEND_RESPONSE;
+        }
+
+        current_radio = string(json_string_value(radio));
+
+        // Get Bssid 
         json_t *bssid;
-        bssid = json_object_get(root, JSON_MAC_ADDRESS);
+        bssid = json_object_get(changes, JSON_MAC_ADDRESS);
         if (!json_is_string(bssid))
         {
             cout << "ERROR: bssid is not a valid string." <<endl;
@@ -584,7 +623,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
     // Determine whether to generate success reply or not
     if (if_send_response == RETURN_CODE_SEND_RESPONSE)
     {
-        this->set_success_msg(current_command);
+        this->set_success_msg(current_command, current_radio);
     }
 
     return RETURN_CODE_OK | if_send_response;
@@ -593,21 +632,22 @@ uint8_t CommsAgent::parse_json(const char *json_string)
 void CommsAgent::set_error_msg(const std::string& command, const std::string& message)
 {
     this->message_lock.lock();
-    this->send_message.reset(new string(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + command
-                                        + COMMA + QUOTE + "changes" + QUOTE + COLON + LEFT_BRACKET
-                                        + QUOTE + "success" + QUOTE + COLON + "False"
-                                        + COMMA + QUOTE + "error" + QUOTE + COLON + QUOTE + message + QUOTE
+    this->send_message.reset(new string(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
+                                        + COMMA + SPACE + QUOTE + "changes" + QUOTE + COLON + SPACE + LEFT_BRACKET
+                                        + QUOTE + "success" + QUOTE + COLON + SPACE + "false"
+                                        + COMMA + SPACE + QUOTE + "error" + QUOTE + COLON + SPACE + QUOTE + message + QUOTE
                                         + RIGHT_BRACKET + RIGHT_BRACKET));
     this->message_lock.unlock();
 }
 
-void CommsAgent::set_success_msg(const std::string& command, const std::string& message)
+void CommsAgent::set_success_msg(const std::string& command, const std::string& radio, const std::string& message)
 {
     this->message_lock.lock();
-    this->send_message.reset(new string(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + command
-                                        + COMMA + QUOTE + "changes" + QUOTE + COLON + LEFT_BRACKET
-                                        + QUOTE + "success" + QUOTE + COLON + "True"
-                                        + COMMA + QUOTE + "info" + QUOTE + COLON + QUOTE + message + QUOTE
+    this->send_message.reset(new string(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
+                                        + COMMA + SPACE + QUOTE + "radio" + QUOTE + COLON + SPACE + QUOTE + radio + QUOTE
+                                        + COMMA + SPACE + QUOTE + "changes" + QUOTE + COLON + SPACE + LEFT_BRACKET
+                                        + QUOTE + "success" + QUOTE + COLON + SPACE + "true"
+                                        + COMMA + SPACE + QUOTE + "error" + QUOTE + COLON + SPACE + QUOTE + message + QUOTE
                                         + RIGHT_BRACKET + RIGHT_BRACKET));
     this->message_lock.unlock();
 }

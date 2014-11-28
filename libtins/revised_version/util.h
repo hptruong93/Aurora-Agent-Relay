@@ -19,6 +19,8 @@
 #define QUOTE                       std::string("\"")
 #define COLON                       std::string(":")
 #define COMMA                       std::string(",")
+#define SINGLE_QUOTE				std::string("\'")
+#define SPACE						std::string(" ")
 
 bool compare_mac(uint8_t* mac1, uint8_t* mac2);
 void convert_mac(uint8_t* result_mac, Tins::HWAddress<6> mac);

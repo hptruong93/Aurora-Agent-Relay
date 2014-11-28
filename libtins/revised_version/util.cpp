@@ -133,6 +133,7 @@ char* get_interface_name(const std::string& addr)
 
 char* get_command_output(const std::string& command)
 {
+    std::cout << " $" << command << endl;
     FILE *fp;
     char *output = (char*)malloc(1024);
     size_t index = 0;

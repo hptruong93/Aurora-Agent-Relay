@@ -62,7 +62,9 @@ def add(args):
         _add_interface(args[0], args[1], args[2])
         virtual_interface_index = ovs_controller.get_port(args[2]) + 1
     else:
-        print "Port %s already exists. Cannot add it again..." % args[2]
+        print("Port %s already exists. Cannot add it again..." % args[2])
+        print("Ports are %s" % ovs_controller.get_ports())
+        print_help()
         return
 
     #Turn off flooding
@@ -88,8 +90,14 @@ def associate(args):
 
     if virtual_interface_index == 0:
         print "Interface %s was not bounded to ovs %s" % (args[2], args[1])
+        print("Ports are %s" % ovs_controller.get_ports())
+        print_help()
+        return
     if ethernet_interface_index == 0:
         print "Interface %s was not bounded to ovs %s" % (args[3], args[1])
+        print("Ports are %s" % ovs_controller.get_ports())
+        print_help()
+        return
 
     print "Add uplink flow for mac address %s" % args[4]
     uplink = {}
@@ -185,9 +193,9 @@ def clear(args):
     ovs_controller = ovs_ofctl.OpenVSwitchController(args[0])
     ovs_controller.remove_flow()
 
-def print_help(command_called = []):
+def print_help():
     print "-----------------------------datapath_manager module----------------------------------------"
-    print "Command called: $python %s" % ' '.join(command_called)
+    print "Command called: $python %s" % ' '.join(sys.argv)
     print "This manager uses ovs-vsctl and ovs-ofctl to construct a path between WARP and the hwsim wlan."
     print "This script should be called indepently. Therefore there is no class construction and encapsulation."
     print "Usages --> [as root]"
@@ -223,7 +231,7 @@ if __name__ == "__main__":
             calling = function_mapping.get(sys.argv[1])
             calling(sys.argv[2:])
     except:
-        print_help(sys.argv)
+        print_help()
         print "Encountered exception..."
         traceback.print_exc(file=sys.stdout)
         sys.exit(-1)

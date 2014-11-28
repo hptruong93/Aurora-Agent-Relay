@@ -117,7 +117,7 @@ bool WarpToWlanAgent::process(PDU &pkt)
                         {
                             this->packet_sender.get()->default_interface(names[i].c_str());
                             this->packet_sender.get()->send(to_send);
-                            cout << "Sent 1 packet to " << names[i] << endl;
+                            // cout << "Sent 1 packet to " << names[i] << endl;
                         }
                     } else {
                         cout << "ERROR: no interface found for the destination hardware address: " 
