@@ -77,6 +77,7 @@ namespace RelayAgents {
             void set_error_msg(const std::string& command, const std::string& message = std::string(""));
             void set_success_msg(const std::string& command, const std::string& radio, const std::string& message = std::string(""));
             void set_msg(const std::string& message = std::string(""));
+            void send_msg(const std::string& message = std::string(""));
             // Bssid update
             void update_bssids(int operation_code, void* bssid);
             void add_to_bssid_group(BssidNode* node);

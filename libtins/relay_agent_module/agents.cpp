@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 #include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "mon_to_warp_agent.h"
 #include "wlan_to_warp_agent.h"
@@ -15,6 +18,11 @@
 
 using namespace RelayAgents;
 using namespace std;
+
+CommsAgent* comms_agent;
+WarpToWlanAgent *warp_to_wlan;
+MonToWarpAgent *mon_to_warp;
+DPMAgent *dpm;
 
 ParseFunctionCode parse_input(string input, vector<string>& tokens)
 {
@@ -48,10 +56,26 @@ ParseFunctionCode parse_input(string input, vector<string>& tokens)
     }
     else
     {
-        cout<<"ERROR: Unrecognized command"<<endl;
+        cout<<"ERROR: Unrecognized command: " << input <<endl;
 
         return ParseFunctionCode::ERROR;
     }
+}
+
+void interrupt_handler(int sig)
+{
+    if (sig == 2)
+    {
+        string terminate_command(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + "_terminate" + RIGHT_BRACKET);
+        comms_agent->send_msg(terminate_command);
+
+        delete comms_agent;
+        delete dpm;
+        delete mon_to_warp;
+        delete warp_to_wlan;
+    }
+
+    exit(1);
 }
 
 // Input parameters:
@@ -62,17 +86,16 @@ int main(int argc, char *argv[])
 {
     #ifdef TEST_JSON_DECODER
 
-    CommsAgent comms_agent;
-    WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
-    comms_agent.set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
-    comms_agent.parse_json(SAMPLE_JSON_STRING);
+    CommsAgent comms_agent_test;
+    warp_to_wlan = new WarpToWlanAgent();
+    comms_agent_test.set_warp_to_wlan_agent((BssidNode*)warp_to_wlan);
+    comms_agent_test.parse_json(SAMPLE_JSON_STRING);
 
     #else
 
-    CommsAgent* comms_agent;
-    WarpToWlanAgent *warp_to_wlan = new WarpToWlanAgent();
-    MonToWarpAgent *mon_to_warp = new MonToWarpAgent();
-    DPMAgent *dpm = new DPMAgent();
+    warp_to_wlan = new WarpToWlanAgent();
+    mon_to_warp = new MonToWarpAgent();
+    dpm = new DPMAgent();
     dpm->init();
 
     if (argc < 4)
@@ -149,6 +172,13 @@ int main(int argc, char *argv[])
         thread dpm_timed_check_thread(&DPMAgent::timed_check, dpm, 2.0);
         dpm_timed_check_thread.detach();
     }
+
+    struct sigaction sig_handler;
+    sig_handler.sa_handler = interrupt_handler;
+    sigemptyset(&sig_handler.sa_mask);
+    sig_handler.sa_flags = 0;
+
+    sigaction(SIGINT, &sig_handler, NULL);
 
     // Agent Factory
     string input_string;

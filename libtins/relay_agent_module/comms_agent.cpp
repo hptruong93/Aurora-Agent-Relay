@@ -631,25 +631,21 @@ uint8_t CommsAgent::parse_json(const char *json_string)
 
 void CommsAgent::set_error_msg(const std::string& command, const std::string& message)
 {
-    this->message_lock.lock();
-    this->send_message.reset(new string(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
+    this->set_msg(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
                                         + COMMA + SPACE + QUOTE + "changes" + QUOTE + COLON + SPACE + LEFT_BRACKET
                                         + QUOTE + "success" + QUOTE + COLON + SPACE + "false"
                                         + COMMA + SPACE + QUOTE + "error" + QUOTE + COLON + SPACE + QUOTE + message + QUOTE
-                                        + RIGHT_BRACKET + RIGHT_BRACKET));
-    this->message_lock.unlock();
+                                        + RIGHT_BRACKET + RIGHT_BRACKET);
 }
 
 void CommsAgent::set_success_msg(const std::string& command, const std::string& radio, const std::string& message)
 {
-    this->message_lock.lock();
-    this->send_message.reset(new string(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
+    this->set_msg(string(RESPONSE_HEADER) + LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + command + QUOTE
                                         + COMMA + SPACE + QUOTE + "radio" + QUOTE + COLON + SPACE + QUOTE + radio + QUOTE
                                         + COMMA + SPACE + QUOTE + "changes" + QUOTE + COLON + SPACE + LEFT_BRACKET
                                         + QUOTE + "success" + QUOTE + COLON + SPACE + "true"
                                         + COMMA + SPACE + QUOTE + "error" + QUOTE + COLON + SPACE + QUOTE + message + QUOTE
-                                        + RIGHT_BRACKET + RIGHT_BRACKET));
-    this->message_lock.unlock();
+                                        + RIGHT_BRACKET + RIGHT_BRACKET);
 }
 
 void CommsAgent::set_msg(const std::string& message)
@@ -657,6 +653,12 @@ void CommsAgent::set_msg(const std::string& message)
     this->message_lock.lock();
     this->send_message.reset(new string(message));
     this->message_lock.unlock();
+}
+
+void CommsAgent::send_msg(const std::string& message)
+{
+    this->set_msg(message);
+    sem_post(&this->signal);
 }
 
 void CommsAgent::update_bssids(int operation_code, void* bssid)
