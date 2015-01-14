@@ -19,7 +19,9 @@ enum BSSID_NODE_OPS
     TRANSMISSION_CNTRL,
     BSSID_CNTRL,
     // Comms agent associate/disassociate mac addr
-    COMMAND_ADD
+    COMMAND_ADD,
+    // Shutdown command
+    COMMAND_SHUTDOWN
 };
 
 class BssidNode

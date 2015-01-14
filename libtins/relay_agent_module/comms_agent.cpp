@@ -615,6 +615,17 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE, (void*)to_disassociate.c_str());
     }
+    else if (strcmp(command_str, SHUTDOWN_CMD) == 0)
+    {
+        // Shutdown everything
+        if_send_response = RETURN_CODE_SEND_RESPONSE;
+
+        std::string shutdown_command(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + "shutdown" + RIGHT_BRACKET);
+        set_msg(shutdown_command);
+
+        // Update corresponding bssid nodes
+        this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, NULL);
+    }
 
     json_decref(root);
 

@@ -29,6 +29,7 @@
 #define UCI_DELETE_BSS                  "_delete_bss_index"
 #define MAC_ASSOCIATE_CMD               "_mac_associate"
 #define MAC_DISASSOCIATE_CMD            "_mac_disassociate"
+#define SHUTDOWN_CMD                    "shutdown"
 
 // Json parameters
 #define JSON_COMMAND                    "command"

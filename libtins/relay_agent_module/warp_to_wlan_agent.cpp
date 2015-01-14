@@ -260,6 +260,9 @@ int WarpToWlanAgent::sync(int operation_code, void* data)
         case BSSID_NODE_OPS::SEND_BSSID_CNTRL:
             this->protocol_sender.get()->send(*(WARP_protocol*)data, TYPE_CONTROL, SUBTYPE_BSSID_CONTROL);
             return 0;
+        case BSSID_NODE_OPS::COMMAND_SHUTDOWN:
+            this->signal_complete();
+            return 0;
     }
 
     return 0;

@@ -66,7 +66,7 @@ void interrupt_handler(int sig)
 {
     if (sig == 2)
     {
-        string terminate_command(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + "_terminate" + RIGHT_BRACKET);
+        string terminate_command(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + "shutdown" + RIGHT_BRACKET);
         comms_agent->send_msg(terminate_command);
 
         delete comms_agent;
