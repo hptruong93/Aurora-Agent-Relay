@@ -131,7 +131,11 @@ void MonToWarpAgent::set_out_interface(const char* out_interface)
 int MonToWarpAgent::sync(int operation_code, void* addr)
 {
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
-    string address((char*)addr);
+
+    if (addr != NULL)
+    {
+        string address((char*)addr);
+    }
 
     switch(op)
     {
