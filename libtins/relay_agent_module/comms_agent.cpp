@@ -186,7 +186,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
     // Parse command
     const char *command_str = json_string_value(command);
     std::string current_command(command_str);
-    std::string current_radio;
+    std::string current_radio("");
 
     if (strcmp(command_str, RADIO_SET_CMD) == 0 || 
         strcmp(command_str, RADIO_BULK_SET_CMD) == 0)
@@ -621,11 +621,8 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         // Shutdown everything
         if_send_response = RETURN_CODE_SEND_RESPONSE;
 
-        std::string shutdown_command(LEFT_BRACKET + QUOTE + "command" + QUOTE + COLON + SPACE + QUOTE + "shutdown" + RIGHT_BRACKET);
-        set_msg(shutdown_command);
-
         // Update corresponding bssid nodes
-        // this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, NULL);
+        this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, "");
     }
 
     json_decref(root);
