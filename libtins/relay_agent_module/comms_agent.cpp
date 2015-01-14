@@ -617,6 +617,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
     }
     else if (strcmp(command_str, SHUTDOWN_CMD) == 0)
     {
+        std::cout << "Shutdown" << std::endl;
         // Shutdown everything
         if_send_response = RETURN_CODE_SEND_RESPONSE;
 
@@ -624,7 +625,7 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         set_msg(shutdown_command);
 
         // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, NULL);
+        // this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, NULL);
     }
 
     json_decref(root);

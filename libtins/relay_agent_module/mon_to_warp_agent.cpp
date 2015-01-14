@@ -132,9 +132,10 @@ int MonToWarpAgent::sync(int operation_code, void* addr)
 {
     BSSID_NODE_OPS op = (BSSID_NODE_OPS)operation_code;
 
+    string address;
     if (addr != NULL)
     {
-        string address((char*)addr);
+        address = string((char*)addr);
     }
 
     switch(op)
