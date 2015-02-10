@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <condition_variable>
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -180,28 +181,20 @@ int main(int argc, char *argv[])
 
     sigaction(SIGINT, &sig_handler, NULL);
 
-    // Agent Factory
-    string input_string;
+    std::condition_variable complete;
+    std::mutex complete_mutex;
+    std::unique_lock<std::mutex> complete_lock(complete_mutex);
+    comms_agent->set_complete_condvar(&complete);
 
-    // Main thread. Manually spawn agent threads
-    while(true)
-    {
-        vector<string> args;
-        cout<<"Enter command:"<<endl;
-        getline(cin, input_string);
-
-        ParseFunctionCode code = parse_input(input_string, args);
-        if (code == ParseFunctionCode::NEW_THREAD)
-        {
-            AgentFactory::spawn_agent_thread(args);
-        }
-        else if (code == ParseFunctionCode::KILL)
-        {
-            AgentFactory::kill_agent_thread(stoi(args[1]));
-        }
-    }
+    complete.wait(complete_lock);
 
     #endif
+
+    // Delete all pointers
+    delete comms_agent;
+    delete dpm;
+    delete mon_to_warp;
+    delete warp_to_wlan;
 
     return 0;
 }

@@ -12,6 +12,7 @@
 #include <map>
 #include <mutex>
 #include <semaphore.h>
+#include <condition_variable>
 
 #include <zmq.hpp>
 #include <jansson.h>
@@ -29,6 +30,7 @@
 #define UCI_DELETE_BSS                  "_delete_bss_index"
 #define MAC_ASSOCIATE_CMD               "_mac_associate"
 #define MAC_DISASSOCIATE_CMD            "_mac_disassociate"
+#define OVS_SOCKET_PATH_CMD             "_ovs_socket_path"
 #define SHUTDOWN_CMD                    "shutdown"
 
 // Json parameters
@@ -41,6 +43,7 @@
 #define JSON_DISABLED                   "disabled"
 #define JSON_BSSID                      "bssid"
 #define JSON_RADIO                      "radio"
+#define JSON_SOCKET                     "socket"
 #define RESPONSE_HEADER                 "111 "
 
 // Command for factory
@@ -79,6 +82,7 @@ namespace RelayAgents {
             void set_success_msg(const std::string& command, const std::string& radio, const std::string& message = std::string(""));
             void set_msg(const std::string& message = std::string(""));
             void send_msg(const std::string& message = std::string(""));
+            void set_complete_condvar(std::condition_variable *new_complete);
             // Bssid update
             void update_bssids(int operation_code, void* bssid);
             void add_to_bssid_group(BssidNode* node);
@@ -99,6 +103,8 @@ namespace RelayAgents {
             std::mutex command_queue_lock;
             std::queue<std::string> command_queue;
             sem_t new_command;
+            // indicates the completion of all threads
+            std::condition_variable *complete;
     };
     
     // Receives command and initialize different agents

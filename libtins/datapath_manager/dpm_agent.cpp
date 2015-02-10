@@ -61,6 +61,16 @@ void DPMAgent::initialize(std::string ovs_name)
     line_str.erase(0, line_str.find('/'));
 
     socket_path = line_str;
+
+    // Send socket path back to aurora manager
+    // format: {"command": _ovs_socket_path_cmd, "changes":{"socket_path": path}}
+    std::string json_socket_path(LEFT_BRACKET + QUOTE + JSON_COMMAND + QUOTE + COLON + OVS_SOCKET_PATH_CMD
+                                + COMMA + QUOTE + JSON_CHANGES + QUOTE + COLON 
+                                + LEFT_BRACKET
+                                + QUOTE + JSON_SOCKET + QUOTE + COLON + socket_path
+                                + RIGHT_BRACKET
+                                + RIGHT_BRACKET);
+    this->comms_agent->sync(BSSID_NODE_OPS::COMMAND_ADD, (char*)json_socket_path.c_str());
     //std::cout << "Found socket path " << socket_path << std::endl;
 }
 

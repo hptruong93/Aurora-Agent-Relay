@@ -40,6 +40,7 @@ CommsAgent::CommsAgent(const char *init_send_port, const char *init_recv_port, c
     send_port = unique_ptr<string>(new string(init_send_port));
     recv_port = unique_ptr<string>(new string(init_recv_port));
     peer_ip_addr = unique_ptr<string>(new string(init_peer_ip_addr));
+    complete = NULL;
 
     // Consume the semaphore
     sem_init(&this->signal, 0, 1);
@@ -344,6 +345,9 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         // Configuration successful!!
         delete transmission_packet;
         free(transmission_control);
+
+        // Set return message
+        this->set_success_msg(current_command, current_radio);
         
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_ADD, (void*)json_string_value(bssid));
@@ -441,6 +445,9 @@ uint8_t CommsAgent::parse_json(const char *json_string)
 
         // Configuration succesful!
         delete mac_remove_packet;
+
+        // Set return message
+        this->set_success_msg(current_command, current_radio);
 
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_REMOVE, (void*)json_string_value(bssid));
@@ -615,6 +622,13 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         // Update corresponding bssid nodes
         this->update_bssids(BSSID_NODE_OPS::BSSID_MAC_DISASSOCIATE, (void*)to_disassociate.c_str());
     }
+    else if (strcmp(command_str, OVS_SOCKET_PATH_CMD) == 0)
+    {
+        if_send_response = RETURN_CODE_SEND_RESPONSE;
+
+        // Send back ovs socket path to aurora
+        this->set_msg(std::string(json_string));
+    }
     else if (strcmp(command_str, SHUTDOWN_CMD) == 0)
     {
         std::cout << "Shutdown" << std::endl;
@@ -622,18 +636,17 @@ uint8_t CommsAgent::parse_json(const char *json_string)
         if_send_response = RETURN_CODE_SEND_RESPONSE;
 
         // Update corresponding bssid nodes
-        this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, "");
+        this->update_bssids(BSSID_NODE_OPS::COMMAND_SHUTDOWN, (char*)command_str);
+
+        if (complete != NULL)
+        {
+            complete->notify_all();
+        }
     }
 
     json_decref(root);
 
     cout << "Parsing: Everything ok." << endl;
-
-    // Determine whether to generate success reply or not
-    if (if_send_response == RETURN_CODE_SEND_RESPONSE)
-    {
-        this->set_success_msg(current_command, current_radio);
-    }
 
     return RETURN_CODE_OK | if_send_response;
 }
@@ -668,6 +681,11 @@ void CommsAgent::send_msg(const std::string& message)
 {
     this->set_msg(message);
     sem_post(&this->signal);
+}
+
+void CommsAgent::set_complete_condvar(std::condition_variable *new_complete)
+{
+    complete = new_complete;
 }
 
 void CommsAgent::update_bssids(int operation_code, void* bssid)
